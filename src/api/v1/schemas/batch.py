@@ -1,4 +1,6 @@
+from .product import ProductResponse
 from pydantic import BaseModel, ConfigDict
+from typing import List
 from datetime import datetime, date
 
 class BatchModel(BaseModel):
@@ -23,7 +25,7 @@ class BatchResponse(BatchModel):
     is_closed: bool
     batch_number: int 
     batch_date: date 
-    #products сделать потом
+    products: List[ProductResponse]
 
 
 
