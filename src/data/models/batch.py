@@ -1,6 +1,6 @@
 from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UniqueConstraint, Index, DateTime
+from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey
 from datetime import datetime, date
 from typing import List
 
@@ -13,7 +13,7 @@ class Batch(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     task_description: Mapped[str] = mapped_column(nullable=False)
-    # work_center_id вместе с таблицей WorkCenter FK
+    work_center_id: Mapped[int] = mapped_column(ForeignKey("work_centers.id"))
     shift: Mapped[str] = mapped_column(nullable=False)
     team: Mapped[str]
 
@@ -30,7 +30,7 @@ class Batch(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
     products: Mapped[List["Product"]] = relationship("Product", back_populates="batch")
-    # work_center: relationship -> WorkCenter
+    work_center: Mapped["WorkCenter"] = relationship("WorkCenter")
 
     __table_args__ = (
         UniqueConstraint("batch_number", "batch_date", name="uq_batch_number_date"),

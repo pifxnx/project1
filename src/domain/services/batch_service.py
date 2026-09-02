@@ -1,4 +1,4 @@
-from ...data.repositories.batch import BatchRepository
+from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse
 from ...data.models.batch import Batch
 

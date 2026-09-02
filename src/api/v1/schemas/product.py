@@ -10,3 +10,8 @@ class ProductResponse(ProductModel):
     unique_code: str 
     is_aggregated: bool 
     aggregated_at: datetime | None = None
+
+
+class ProductCreate(ProductModel):
+    unique_code: str 
+    batch_id: int
