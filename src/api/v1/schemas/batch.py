@@ -10,6 +10,7 @@ class BatchCreate(BatchModel):
     #work_center
     shift: str
     team: str 
+    ekn_code: str
     batch_number: int 
     batch_date: date
     nomenclature: str

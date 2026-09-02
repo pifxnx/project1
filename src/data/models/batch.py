@@ -1,6 +1,6 @@
 from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UniqueConstraint, Index
+from sqlalchemy import UniqueConstraint, Index, DateTime
 from datetime import datetime, date
 
 
@@ -9,7 +9,7 @@ class Batch(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     is_closed: Mapped[bool] = mapped_column(default=False)
-    closed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     task_description: Mapped[str] = mapped_column(nullable=False)
     # work_center_id вместе с таблицей WorkCenter FK
@@ -22,11 +22,11 @@ class Batch(Base):
     nomenclature: Mapped[str]
     ekn_code: Mapped[str]
 
-    shift_start: Mapped[datetime] = mapped_column(default=datetime.now)
-    shift_end: Mapped[datetime] = mapped_column(default=datetime.now)
+    shift_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    shift_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
-    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
-    updated_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
     # products: Mapped[list[Product]] = relationship(back_populates="batch")
     # work_center: relationship -> WorkCenter
