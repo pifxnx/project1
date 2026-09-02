@@ -2,6 +2,7 @@ from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint, Index, DateTime
 from datetime import datetime, date
+from typing import List
 
 
 class Batch(Base):
@@ -28,7 +29,7 @@ class Batch(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
-    # products: Mapped[list[Product]] = relationship(back_populates="batch")
+    products: Mapped[List["Product"]] = relationship("Product", back_populates="batch")
     # work_center: relationship -> WorkCenter
 
     __table_args__ = (
