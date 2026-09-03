@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from datetime import date
 from typing import List
 from ..models.batch import Batch
@@ -15,7 +16,7 @@ class BatchRepository:
         return batch
 
     async def get_by_id(self, batch_id: int) -> Batch | None:
-        stmt = select(Batch).where(Batch.id == batch_id)
+        stmt = select(Batch).options(selectinload(Batch.products)).where(Batch.id == batch_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -29,7 +30,7 @@ class BatchRepository:
             offset: int = 0,
             limit: int = 20
     ) -> List[Batch]:
-        stmt = select(Batch)
+        stmt = select(Batch).options(selectinload(Batch.products))
         if is_closed is not None:
             stmt = stmt.where(Batch.is_closed == is_closed)
         if batch_number is not None:

@@ -1,4 +1,5 @@
 from datetime import date
+from typing import List
 from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse
 from ...data.models.batch import Batch
@@ -11,7 +12,13 @@ class BatchService:
     async def create(self, data: BatchCreate) -> BatchResponse:
         batch = Batch(**data.model_dump())
         batch = await self.repository.create(batch)
-        return BatchResponse.model_validate(batch)
+        return BatchResponse(
+            id=batch.id,
+            is_closed=batch.is_closed,
+            batch_number=batch.batch_number,
+            batch_date=batch.batch_date,
+            products=[]
+        )
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
         batch = await self.repository.get_by_id(batch_id)

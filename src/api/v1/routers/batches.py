@@ -32,12 +32,12 @@ async def create_batch(
 
 @router.get("/", response_model=List[BatchResponse])
 async def get_batches_filter(
-    is_closed: bool | None,
-    batch_number: int | None,
-    batch_date: date | None,
-    work_center_id: int | None, 
-    shift: str | None,
     session: Annotated[AsyncSession, Depends(get_db)],
+    is_closed: bool | None = None,
+    batch_number: int | None = None,
+    batch_date: date | None = None,
+    work_center_id: int | None = None, 
+    shift: str | None = None,
     offset: int = Query(0, ge=0), 
     limit: int = Query(20, le=100),
 ) -> List[BatchResponse]:

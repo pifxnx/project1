@@ -20,5 +20,5 @@ class Product(Base):
     batch: Mapped["Batch"] = relationship("Batch", back_populates="products")
 
     __table_args__ = (
-            Index("idx_product_batch_aggregated", "batch_id", "is_aggregated")    
+            Index("idx_product_batch_aggregated", "batch_id", "is_aggregated"),
     )

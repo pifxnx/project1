@@ -3,6 +3,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey
 from datetime import datetime, date
 from typing import List
+from .work_center import WorkCenter
+from .product import Product
 
 
 class Batch(Base):
@@ -35,5 +37,5 @@ class Batch(Base):
     __table_args__ = (
         UniqueConstraint("batch_number", "batch_date", name="uq_batch_number_date"),
         Index("idx_batch_closed", "is_closed"),
-        Index("idx_batch_shift_times", "shift_start", "shift_end")
+        Index("idx_batch_shift_times", "shift_start", "shift_end"),
     )

@@ -8,6 +8,8 @@ from alembic import context
 from src.core.database import Base
 
 from src.data.models.batch import Batch
+from src.data.models.product import Product
+from src.data.models.work_center import WorkCenter
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
