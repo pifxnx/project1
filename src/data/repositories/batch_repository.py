@@ -1,5 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession 
 from sqlalchemy import select
+from datetime import date
+from typing import List
 from ..models.batch import Batch
 
 class BatchRepository:
@@ -16,3 +18,30 @@ class BatchRepository:
         stmt = select(Batch).where(Batch.id == batch_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_with_filter(
+            self,
+            is_closed: bool | None = None,
+            batch_number: int | None = None,
+            batch_date: date | None = None, 
+            work_center_id: int | None = None,
+            shift: str | None = None, 
+            offset: int = 0,
+            limit: int = 20
+    ) -> List[Batch]:
+        stmt = select(Batch)
+        if is_closed is not None:
+            stmt = stmt.where(Batch.is_closed == is_closed)
+        if batch_number is not None:
+            stmt = stmt.where(Batch.batch_number == batch_number)
+        if batch_date is not None:
+            stmt = stmt.where(Batch.batch_date == batch_date)
+        if work_center_id is not None:
+            stmt = stmt.where(Batch.work_center_id == work_center_id)
+        if shift is not None:
+            stmt = stmt.where(Batch.shift == shift)
+
+        stmt = stmt.offset(offset).limit(limit)
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())

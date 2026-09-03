@@ -1,3 +1,4 @@
+from datetime import date
 from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse
 from ...data.models.batch import Batch
@@ -18,3 +19,25 @@ class BatchService:
         ### написать исключение если не найдено
 
         return BatchResponse.model_validate(batch)
+
+    async def get_batches(
+            self,
+            is_closed: bool | None = None,
+            batch_number: int | None = None,
+            batch_date: date | None = None, 
+            work_center_id: int | None = None,
+            shift: str | None = None, 
+            offset: int = 0,
+            limit: int = 20
+    ) -> List[BatchResponse]:
+        batches = await self.repository.get_with_filter(
+            is_closed=is_closed,
+            batch_number=batch_number,
+            batch_date=batch_date,
+            work_center_id=work_center_id,
+            shift=shift,
+            offset=offset,
+            limit=limit
+        )
+
+        return [BatchResponse.model_validate(batch) for batch in batches]
