@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.database import get_db
 from ..schemas.batch import BatchCreate, BatchResponse
 from ....domain.services.batch_service import BatchService
-from ....data.repositories.batch import BatchRepository
+from ....data.repositories.batch_repository import BatchRepository
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
