@@ -35,8 +35,8 @@ class Status(enum.Enum):
 class WebhookDelivery(Base):
     __tablename__ = "webhook_deliveries"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    subscription: Mapped[int] = mapped_column(ForeignKey("webhook_subscriptions.id"))
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    subscription_id: Mapped[int] = mapped_column(ForeignKey("webhook_subscriptions.id"))
     event_type: Mapped[str]
     payload: Mapped[dict] = mapped_column(JSON)
 
@@ -52,4 +52,4 @@ class WebhookDelivery(Base):
     )
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    subscription_id: Mapped["WebhookSubscription"] = relationship("WebhookSubscription")
+    subscription: Mapped["WebhookSubscription"] = relationship("WebhookSubscription")
