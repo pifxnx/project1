@@ -1,7 +1,7 @@
 from ...core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List
 from .work_center import WorkCenter
 from .product import Product
@@ -25,11 +25,23 @@ class Batch(Base):
     nomenclature: Mapped[str]
     ekn_code: Mapped[str]
 
-    shift_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
-    shift_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    shift_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+        )
+    shift_end: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+        )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+        )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+        )
 
     products: Mapped[List["Product"]] = relationship("Product", back_populates="batch")
     work_center: Mapped["WorkCenter"] = relationship("WorkCenter")
