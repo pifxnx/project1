@@ -48,3 +48,8 @@ class BatchService:
         )
 
         return [BatchResponse.model_validate(batch) for batch in batches]
+
+    async def set_is_closed(self, id: int) -> BatchResponse:
+        batch = await self.repository.set_is_closed(id)
+
+        return BatchResponse.model_validate(batch)

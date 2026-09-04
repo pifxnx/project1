@@ -53,3 +53,13 @@ async def get_batches_filter(
         offset=offset,
         limit=limit,
     )
+
+@router.patch("/{batch_id}", response_model=BatchResponse)
+async def set_is_closed(
+    session: Annotated[AsyncSession, Depends(get_db)], 
+    batch_id: int
+) -> BatchResponse:
+    repository = BatchRepository(session)
+    service = BatchService(repository)
+
+    return await service.set_is_closed(batch_id)

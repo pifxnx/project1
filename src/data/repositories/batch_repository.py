@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from datetime import date
 from typing import List
+from datetime import datetime, timezone
 from ..models.batch import Batch
 
 class BatchRepository:
@@ -46,3 +47,21 @@ class BatchRepository:
 
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+
+    async def set_is_closed(self, id: int) -> Batch | None:
+        batch = await self.session.get(Batch, id)
+        if not batch:
+            return None ### дописать исключение
+
+        if not batch.is_closed:
+            batch.is_closed = True
+            batch.closed_at = datetime.now(timezone.utc)
+
+        else: 
+            batch.is_closed = False
+            batch.closed_at = None
+
+        await self.session.commit()
+
+        return batch
