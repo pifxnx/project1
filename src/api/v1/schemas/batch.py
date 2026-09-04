@@ -16,7 +16,6 @@ class BatchCreate(BatchModel):
     batch_number: int 
     batch_date: date
     nomenclature: str
-    #work_center_id
     shift_start: datetime
     shift_end: datetime
 
