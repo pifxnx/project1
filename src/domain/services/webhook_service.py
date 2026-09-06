@@ -13,6 +13,12 @@ from ...data.models.webhook import(
     WebhookDelivery,
     WebhookSubscription
 )
+from ..exceptions.webhook_excpetion import (
+    WebhookSubscriptionAlreadyExistsException,
+    WebhookSubscriptionNotFoundException,
+    WebhookDeliveryAlreadyExistsException,
+    WebhookDeliveryNotFoundException
+)
 
 
 class WebhookSubscriptionService:
@@ -27,6 +33,9 @@ class WebhookSubscriptionService:
 
     async def get_by_id(self, sub_id: int) -> WebhookSubscriptionResponse | None:
         hooksub = await self.repository.get_by_id(sub_id)
+
+        if not hooksub:
+            raise WebhookSubscriptionNotFoundException(sub_id)
 
         return WebhookSubscriptionResponse.model_validate(hooksub)
 
@@ -43,6 +52,9 @@ class WebhookDeliveryService:
 
     async def get_by_id(self, del_id: int) -> WebhookDeliveryResponse | None:
         hookdel = await self.repository.get_by_id(del_id)
+
+        if not hookdel:
+            raise WebhookDeliveryNotFoundException(del_id)
 
         return WebhookDeliveryResponse.model_validate(hookdel)
 
