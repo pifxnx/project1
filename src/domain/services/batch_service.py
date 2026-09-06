@@ -3,6 +3,9 @@ from typing import List
 from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse
 from ...data.models.batch import Batch
+from ..exceptions.batch_exception import (
+    BatchNotFoundException, BatchAlreadyExistsException
+)
 
 
 class BatchService:
@@ -23,7 +26,8 @@ class BatchService:
     async def get_by_id(self, batch_id: int) -> BatchResponse:
         batch = await self.repository.get_by_id(batch_id)
 
-        ### написать исключение если не найдено
+        if not batch:
+            raise BatchNotFoundException(batch_id)
 
         return BatchResponse.model_validate(batch)
 
