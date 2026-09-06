@@ -7,7 +7,8 @@ from ...api.v1.schemas.webhook import(
     WebhookDeliveryResponse,
     WebhookDeliveryCreate,
     WebhookSubscriptionResponse,
-    WebhookSubscriptionCreate
+    WebhookSubscriptionCreate,
+    WebhookSubscriptionListResponse
 )
 from ...data.models.webhook import(
     WebhookDelivery,
@@ -38,6 +39,16 @@ class WebhookSubscriptionService:
             raise WebhookSubscriptionNotFoundException(sub_id)
 
         return WebhookSubscriptionResponse.model_validate(hooksub)
+
+    async def get_all(self) -> WebhookSubscriptionListResponse:
+        hooksubs = await self.repository.get_all()
+        items = [WebhookSubscriptionResponse.model_validate(hooksub)
+                 for hooksub in hooksubs]
+
+        return WebhookSubscriptionListResponse(
+            items=items,
+            total=len(items)
+        )
 
 
 class WebhookDeliveryService:

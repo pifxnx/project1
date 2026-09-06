@@ -19,6 +19,12 @@ class WebhookSubscriptionRepository:
         hooksub = await self.session.get(WebhookSubscription, sub_id)
         return hooksub
 
+    async def get_all(self) -> List[WebhookSubscription]:
+        stmt = select(WebhookSubscription)
+        result = await self.session.execute(stmt)
+
+        return list(result.scalars().all())
+
 
 class WebhookDeliveryRepository:
     def __init__(self, session: AsyncSession):

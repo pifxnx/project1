@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from typing import List
 
 
 class WebhookSubscriptionModel(BaseModel):
@@ -21,6 +22,10 @@ class WebhookSubscriptionResponse(WebhookSubscriptionModel):
     timeout: int 
     created_at: datetime
     updated_at: datetime
+
+class WebhookSubscriptionListResponse(BaseModel):
+    items: List[WebhookSubscriptionResponse]
+    total: int
 
 
 class WebhookDeliveryModel(BaseModel):
