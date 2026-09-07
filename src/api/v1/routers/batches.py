@@ -6,6 +6,7 @@ from ....core.database import get_db
 from ..schemas.batch import BatchCreate, BatchResponse
 from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
+from ....tasks.aggregation import aggregate_products_batch_task
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
@@ -63,3 +64,17 @@ async def set_is_closed(
     service = BatchService(repository)
 
     return await service.set_is_closed(batch_id)
+
+
+@router.post("/{batch_id}/aggregate")
+async def aggregate(
+    batch_id: int,
+    unique_codes: list[str]
+) -> dict:
+   result = aggregate_products_batch_task.delay(batch_id, unique_codes)
+
+   return {
+       "task_id": result.id,
+       "status": result.status,
+       "message": "Aggregation task started"
+   }

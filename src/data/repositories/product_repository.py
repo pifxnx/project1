@@ -1,7 +1,8 @@
 from ..models.product import Product
 from sqlalchemy.ext.asyncio import AsyncSession 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from typing import List
+from datetime import datetime, timezone
 
 
 class ProductRepository:
@@ -27,3 +28,37 @@ class ProductRepository:
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def get_by_batch_id_and_unique_codes(
+            self,
+            batch_id: int,
+            unique_codes: list[str]
+    ) -> List[Product]:
+        stmt = select(Product).where(Product.batch_id == batch_id,
+                                    Product.unique_code.in_(unique_codes))
+        result = await self.session.execute(stmt)
+
+        return list(result.scalars().all())
+
+    async def aggregate_products(
+            self,
+            batch_id: int,
+            unique_codes: list[str]
+    ) -> int:
+        stmt = (update(Product)
+            .where(
+                Product.batch_id == batch_id,
+                Product.unique_code.in_(unique_codes),
+                Product.is_aggregated.is_(False)
+            )
+            .values(
+                is_aggregated=True,
+                aggregated_at=datetime.now(timezone.utc)
+            )
+            .returning(Product.id)
+        )
+
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+
+        return len(result.scalars().all())

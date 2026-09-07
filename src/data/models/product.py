@@ -1,7 +1,13 @@
 from ...core.database import Base 
+from .batch import Batch
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, Index, ForeignKey
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from .batch import Batch
 
 
 class Product(Base):

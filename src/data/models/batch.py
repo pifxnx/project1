@@ -2,10 +2,12 @@ from ...core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey
 from datetime import datetime, date, timezone
-from typing import List
+from typing import List, TYPE_CHECKING
 from .work_center import WorkCenter
-from .product import Product
 
+
+if TYPE_CHECKING:
+    from .product import Product
 
 class Batch(Base):
     __tablename__ = "batches"
