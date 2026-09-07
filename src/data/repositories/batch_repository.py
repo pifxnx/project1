@@ -21,6 +21,12 @@ class BatchRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_number_and_date(self, batch_number: int, batch_date: date) -> Batch | None:
+        stmt = (select(Batch)
+                .where(Batch.batch_number == batch_number and Batch.batch_date == batch_date))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_with_filter(
             self,
             is_closed: bool | None = None,

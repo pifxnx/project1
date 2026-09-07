@@ -14,6 +14,10 @@ class BatchService:
 
     async def create(self, data: BatchCreate) -> BatchResponse:
         batch = Batch(**data.model_dump())
+        existing = await self.repository.get_by_number_and_date(batch.batch_number, batch.batch_date)
+        if existing:
+            raise BatchAlreadyExistsException()
+
         batch = await self.repository.create(batch)
         return BatchResponse(
             id=batch.id,
