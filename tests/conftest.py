@@ -70,13 +70,16 @@ async def create_batch(get_test_db, create_work_center):
 
 @pytest_asyncio.fixture
 async def create_product(get_test_db, create_batch):
-    product = Product(
-        unique_code="test_123",
-        batch_id=create_batch.id
-    )
+    async def _create_product(unique_code: str):
+        product = Product(
+            unique_code=unique_code,
+            batch_id=create_batch.id
+        )
 
-    get_test_db.add(product)
-    await get_test_db.commit()
-    await get_test_db.refresh(product)
+        get_test_db.add(product)
+        await get_test_db.commit()
+        await get_test_db.refresh(product)
 
-    return product
+        return product
+
+    return _create_product
