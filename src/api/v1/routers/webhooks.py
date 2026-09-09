@@ -49,3 +49,13 @@ async def alter_webhook(
     service = WebhookSubscriptionService(repository)
 
     return await service.alter(webhook_id, data)
+
+@router.delete("/{webhook_id}")
+async def delete_webhook(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    webhook_id: int
+):
+    repository = WebhookSubscriptionRepository(session)
+    service = WebhookSubscriptionService(repository)
+
+    await service.delete(webhook_id)

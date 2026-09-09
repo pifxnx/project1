@@ -62,6 +62,11 @@ class WebhookSubscriptionService:
 
         return WebhookSubscriptionResponse.model_validate(hooksub)
 
+    async def delete(self, sub_id: int) -> None:
+        if not await self.repository.delete(sub_id):
+            raise WebhookSubscriptionNotFoundException(sub_id)
+
+
 
 class WebhookDeliveryService:
     def __init__(self, repository: WebhookDeliveryRepository):

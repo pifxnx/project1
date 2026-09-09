@@ -43,6 +43,15 @@ class WebhookSubscriptionRepository:
 
         return hooksub
 
+    async def delete(self, sub_id: int) -> bool:
+        hooksub = await self.session.get(WebhookSubscription, sub_id)
+
+        if hooksub:
+            await self.session.delete(hooksub)
+            await self.session.commit()
+            return True
+
+        return False
 
 
 
