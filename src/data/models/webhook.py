@@ -10,7 +10,7 @@ class WebhookSubscription(Base):
     __tablename__ = "webhook_subsctriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    url: Mapped[str]
+    url: Mapped[str] = mapped_column(default="https://localhost:5000/webhook")
     events: Mapped[list[str]] = mapped_column(MutableList.as_mutable(ARRAY(String)))
     secret_key: Mapped[str]
     is_active: Mapped[bool] = mapped_column(default=True)
