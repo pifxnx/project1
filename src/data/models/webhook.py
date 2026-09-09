@@ -42,8 +42,8 @@ class WebhookDelivery(Base):
 
     status: Mapped[str] = mapped_column(Enum(Status), default=Status.pending)
     attempts: Mapped[int] = mapped_column(default=0)
-    response_status: Mapped[str | None]
-    response_body: Mapped[str | None]
+    response_status: Mapped[int | None]
+    response_body: Mapped[dict | None]
     error_message: Mapped[str | None]
 
     created_at: Mapped[datetime] = mapped_column(

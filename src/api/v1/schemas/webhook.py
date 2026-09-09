@@ -49,8 +49,8 @@ class WebhookDeliveryResponse(WebhookDeliveryModel):
     payload: dict
     status: str 
     attempts: int
-    response_status: str | None
-    response_body: str | None
+    response_status: int | None
+    response_body: dict | None
     error_message: str | None
     created_at: datetime
     delivered_at: datetime | None 

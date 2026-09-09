@@ -26,6 +26,14 @@ class WebhookSubscriptionRepository:
 
         return list(result.scalars().all())
 
+    async def get_by_event(self, event: str) -> List[WebhookSubscription]:
+        stmt = (select(WebhookSubscription)
+                .where(WebhookSubscription.events.contains([event])))
+
+        result = await self.session.execute(stmt)
+
+        return list(result.scalars().all())
+
 
     async def alter(
             self,
@@ -76,3 +84,21 @@ class WebhookDeliveryRepository:
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
+
+    async def update(
+            self,
+            delivery_id: int,
+            status: str,
+            response_status: int | None = None,
+            response_body: dict | None = None,
+            error_message: str | None = None
+    ) -> WebhookDelivery | None:
+        delivery = await self.session.get(WebhookDelivery, delivery_id)
+
+        if delivery:
+            delivery.status = status
+            delivery.response_status = response_status
+            delivery.response_body = response_body
+            delivery.error_message = error_message
+
+        return delivery
