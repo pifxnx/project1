@@ -59,3 +59,15 @@ async def delete_webhook(
     service = WebhookSubscriptionService(repository)
 
     await service.delete(webhook_id)
+
+
+@router.get("/{webhook_id}/deliveries",
+            response_model=List[WebhookDeliveryResponse])
+async def get_deliveries(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    webhook_id: int
+):
+    repository = WebhookDeliveryRepository(session)
+    service = WebhookDeliveryService(repository)
+
+    return await service.get_by_sub_id(webhook_id)
