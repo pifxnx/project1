@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
 from ..models.webhook import WebhookSubscription, WebhookDelivery
+from ...api.v1.schemas.webhook import WebhookSubscriptionAlter
 
 
 class WebhookSubscriptionRepository:
@@ -24,6 +25,25 @@ class WebhookSubscriptionRepository:
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
+
+
+    async def alter(
+            self,
+            sub_id: int,
+            data: WebhookSubscriptionAlter
+    ) -> WebhookSubscription | None:
+        hooksub = await self.session.get(WebhookSubscription, sub_id)
+        if hooksub:
+            for field, value in data.model_dump(exclude_unset=True).items():
+                if value is not None:
+                    setattr(hooksub, field, value)
+
+            await self.session.commit()
+            await self.session.refresh(hooksub)
+
+        return hooksub
+
+
 
 
 class WebhookDeliveryRepository:

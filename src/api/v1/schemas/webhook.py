@@ -7,7 +7,7 @@ class WebhookSubscriptionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class WebhookSubscriptionCreate(WebhookSubscriptionModel):
-    url: str 
+    url: str | None = None
     events: list[str]
     secret_key: str
     retry_count: int | None = None
@@ -23,9 +23,17 @@ class WebhookSubscriptionResponse(WebhookSubscriptionModel):
     created_at: datetime
     updated_at: datetime
 
-class WebhookSubscriptionListResponse(BaseModel):
+class WebhookSubscriptionListResponse(WebhookSubscriptionModel):
     items: List[WebhookSubscriptionResponse]
     total: int
+
+
+class WebhookSubscriptionAlter(WebhookSubscriptionModel):
+    url: str | None = None 
+    events: list[str] | None = None
+    is_active: bool | None = None
+    retry_count: int | None = None
+    timeout: int | None = None
 
 
 class WebhookDeliveryModel(BaseModel):

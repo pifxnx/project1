@@ -19,4 +19,4 @@ async def create_work_center(
     repository = WorkCenterRepository(session)
     service = WorkCenterService(repository)
 
-    return service.create(workcenter)
+    return await service.create(workcenter)

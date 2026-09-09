@@ -8,7 +8,8 @@ from ...api.v1.schemas.webhook import(
     WebhookDeliveryCreate,
     WebhookSubscriptionResponse,
     WebhookSubscriptionCreate,
-    WebhookSubscriptionListResponse
+    WebhookSubscriptionListResponse,
+    WebhookSubscriptionAlter
 )
 from ...data.models.webhook import(
     WebhookDelivery,
@@ -49,6 +50,17 @@ class WebhookSubscriptionService:
             items=items,
             total=len(items)
         )
+
+    async def alter(
+            self,
+            sub_id: int,
+            data: WebhookSubscriptionAlter
+    ) -> WebhookSubscriptionResponse:
+        hooksub = await self.repository.alter(sub_id, data)
+        if not hooksub:
+            raise WebhookSubscriptionNotFoundException(sub_id)
+
+        return WebhookSubscriptionResponse.model_validate(hooksub)
 
 
 class WebhookDeliveryService:

@@ -13,6 +13,7 @@ from ....domain.services.webhook_service import (
 from ..schemas.webhook import (
     WebhookSubscriptionCreate,
     WebhookSubscriptionResponse,
+    WebhookSubscriptionAlter,
     WebhookDeliveryCreate,
     WebhookDeliveryResponse
 )
@@ -27,7 +28,7 @@ async def create_webhook_subscription(
     repository = WebhookSubscriptionRepository(session)
     service = WebhookSubscriptionService(repository)
 
-    return service.create(hooksub)
+    return await service.create(hooksub)
 
 @router.get("/", response_model=List[WebhookSubscriptionResponse])
 async def get_webhook_subscriptions(
@@ -36,4 +37,15 @@ async def get_webhook_subscriptions(
     repository = WebhookSubscriptionRepository(session)
     service = WebhookSubscriptionService(repository)
 
-    return service.get_all()
+    return await service.get_all()
+
+@router.patch("/{webhook_id}", response_model=WebhookSubscriptionResponse)
+async def alter_webhook(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    webhook_id: int,
+    data: WebhookSubscriptionAlter
+):
+    repository = WebhookSubscriptionRepository(session)
+    service = WebhookSubscriptionService(repository)
+
+    return await service.alter(webhook_id, data)
