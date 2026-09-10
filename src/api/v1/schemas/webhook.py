@@ -7,9 +7,8 @@ class WebhookSubscriptionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class WebhookSubscriptionCreate(WebhookSubscriptionModel):
-    url: str | None = None
     events: list[str]
-    secret_key: str
+    # secret_key: str
     retry_count: int | None = None
     timeout: int | None = None 
 

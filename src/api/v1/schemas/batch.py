@@ -27,22 +27,13 @@ class BatchResponse(BatchModel):
     products: List[ProductResponse]
 
 
+class BatchAlter(BatchModel):
+    is_closed: bool | None = None
+    task_description: bool | None = None
+    shift: str | None = None
+    team: str | None = None
+    ekn_code: str | None = None
+    nomenclature: str | None = None
+    shift_start: datetime | None = None
+    shift_end: datetime | None = None
 
-
-# json
-# [
-# {
-# "СтатусЗакрытия": false,
-# "ПредставлениеЗаданияНаСмену": "Изготовить 1000 болтов М10",
-# "РабочийЦентр": "Цех №1",
-# "Смена": "1 смена",
-# "Бригада": "Бригада Иванова",
-# "НомерПартии": 22222,
-# "ДатаПартии": "2024-01-30",
-# "Номенклатура": "Болт М10х50",
-# "КодЕКН": "EKN-12345",
-# "ИдентификаторРЦ": "RC-001",
-# "ДатаВремяНачалаСмены": "2024-01-30T08:00:00",
-# "ДатаВремяОкончанияСмены": "2024-01-30T20:00:00"
-# }
-# ]

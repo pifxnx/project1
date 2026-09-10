@@ -1,4 +1,5 @@
-from sqlalchemy import ARRAY, String, DateTime, ForeignKey, JSON, Enum
+from sqlalchemy import String, DateTime, ForeignKey, JSON, Enum
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.mutable import MutableList
 from datetime import datetime, timezone
@@ -7,12 +8,12 @@ import enum
 
 
 class WebhookSubscription(Base):
-    __tablename__ = "webhook_subsctriptions"
+    __tablename__ = "webhook_subscriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    url: Mapped[str] = mapped_column(default="https://localhost:5000/webhook")
+    url: Mapped[str] = mapped_column(default="http://localhost:5000/webhook")
     events: Mapped[list[str]] = mapped_column(MutableList.as_mutable(ARRAY(String)))
-    secret_key: Mapped[str]
+    # secret_key: Mapped[str]
     is_active: Mapped[bool] = mapped_column(default=True)
     retry_count: Mapped[int] = mapped_column(default=3)
     timeout: Mapped[int] = mapped_column(default=10)
@@ -43,7 +44,7 @@ class WebhookDelivery(Base):
     status: Mapped[str] = mapped_column(Enum(Status), default=Status.pending)
     attempts: Mapped[int] = mapped_column(default=0)
     response_status: Mapped[int | None]
-    response_body: Mapped[dict | None]
+    response_body: Mapped[dict | None] = mapped_column(JSON)
     error_message: Mapped[str | None]
 
     created_at: Mapped[datetime] = mapped_column(

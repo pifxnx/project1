@@ -14,6 +14,7 @@ from ..schemas.webhook import (
     WebhookSubscriptionCreate,
     WebhookSubscriptionResponse,
     WebhookSubscriptionAlter,
+    WebhookSubscriptionListResponse,
     WebhookDeliveryCreate,
     WebhookDeliveryResponse
 )
@@ -30,7 +31,7 @@ async def create_webhook_subscription(
 
     return await service.create(hooksub)
 
-@router.get("/", response_model=List[WebhookSubscriptionResponse])
+@router.get("/", response_model=WebhookSubscriptionListResponse)
 async def get_webhook_subscriptions(
     session: Annotated[AsyncSession, Depends(get_db)]
 ):

@@ -5,6 +5,7 @@ from datetime import date
 from typing import List
 from datetime import datetime, timezone
 from ..models.batch import Batch
+from ...api.v1.schemas.batch import BatchAlter
 
 class BatchRepository:
     def __init__(self, session: AsyncSession):
@@ -53,6 +54,18 @@ class BatchRepository:
 
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+
+    async def update(self, id: int, data: BatchAlter) -> Batch | None:
+        batch = await self.session.get(Batch, id)
+        if batch:
+            for field, value in data.model_dump(exclude_unset=True).items():
+                setattr(batch, field, value)
+
+            await self.session.commit()
+            await self.session.refresh(batch)
+
+        return batch
 
 
     async def set_is_closed(self, id: int) -> Batch | None:

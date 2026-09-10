@@ -1,11 +1,12 @@
 from datetime import date
 from typing import List
 from ...data.repositories.batch_repository import BatchRepository
-from ...api.v1.schemas.batch import BatchCreate, BatchResponse
+from ...api.v1.schemas.batch import BatchCreate, BatchResponse, BatchAlter
 from ...data.models.batch import Batch
 from ..exceptions.batch_exception import (
     BatchNotFoundException, BatchAlreadyExistsException
 )
+from ...tasks.webhooks import create_webhook_delivery
 
 
 class BatchService:
@@ -19,6 +20,14 @@ class BatchService:
             raise BatchAlreadyExistsException()
 
         batch = await self.repository.create(batch)
+
+        create_webhook_delivery.delay(
+            "batch_created",
+            {"id": batch.id, "batch_number": batch.batch_number,
+             "batch_date": batch.batch_date.isoformat(), "nomenclature": batch.nomenclature,
+             "work_center": batch.work_center_id}
+        )
+
         return BatchResponse(
             id=batch.id,
             is_closed=batch.is_closed,
@@ -56,6 +65,19 @@ class BatchService:
         )
 
         return [BatchResponse.model_validate(batch) for batch in batches]
+
+    async def update(self, id: int, data: BatchAlter) -> BatchResponse:
+        batch = await self.repository.update(id, data)
+        if not batch:
+            raise BatchNotFoundException(id)
+
+        create_webhook_delivery.delay(
+            "batch_updated",
+            {"id": batch.id, "batch_number": batch.batch_number,
+             "changes": data.model_dump(exclude_unset=True)}
+        )
+
+        return BatchResponse.model_validate(batch)
 
     async def set_is_closed(self, id: int) -> BatchResponse:
         batch = await self.repository.set_is_closed(id)

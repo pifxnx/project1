@@ -22,10 +22,8 @@ class Batch(Base):
     team: Mapped[str]
 
     batch_number: Mapped[int] = mapped_column(nullable=False)
-    batch_date: Mapped[date] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-        )
+    batch_date: Mapped[date] 
+        
 
     nomenclature: Mapped[str]
     ekn_code: Mapped[str]
