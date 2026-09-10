@@ -7,6 +7,7 @@ from sqlalchemy import text
 from src.data.models.work_center import WorkCenter
 from src.data.models.batch import Batch
 from src.data.models.product import Product
+from src.data.models.webhook import WebhookSubscription
 
 TEST_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/test"
 
@@ -47,6 +48,16 @@ async def create_work_center(get_test_db):
     await get_test_db.refresh(workcenter)
 
     return workcenter
+
+
+@pytest_asyncio.fixture
+async def create_subscription(get_test_db):
+    sub = WebhookSubscription(events=["batch_created"])
+    get_test_db.add(sub)
+    await get_test_db.commit()
+    await get_test_db.refresh(sub)
+
+    return sub
 
 
 @pytest_asyncio.fixture

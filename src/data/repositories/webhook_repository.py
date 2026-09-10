@@ -101,4 +101,7 @@ class WebhookDeliveryRepository:
             delivery.response_body = response_body
             delivery.error_message = error_message
 
+            await self.session.commit()
+            await self.session.refresh(delivery)
+
         return delivery
