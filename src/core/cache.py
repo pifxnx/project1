@@ -1,10 +1,11 @@
 import json
 from redis.asyncio import Redis
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List
 from ..api.v1.schemas.batch import BatchResponse, BatchWithProductsResponse
 from ..data.models.batch import Batch
+from ..data.models.product import Product
 from ..domain.services.batch_service import BatchService
 from ..core.database import sessionmaker
 
@@ -22,8 +23,8 @@ async def get_redis() -> Redis:
 
 def cache(ttl: int, key_prefix: str):
     def deco(func):
-        async def wrapper(**kwargs):
-            key = f"{key_prefix}:{kwargs}"
+        async def wrapper(*args, **kwargs):
+            key = f"{key_prefix}:{args}:{kwargs}"
 
             r = await get_redis()
 
@@ -31,7 +32,7 @@ def cache(ttl: int, key_prefix: str):
             if cached is not None:
                 return json.loads(cached)
 
-            result = await func(**kwargs)
+            result = await func(*args, **kwargs)
             data = json.dumps(result)
 
             await r.set(key, data, ex=ttl)
@@ -39,6 +40,29 @@ def cache(ttl: int, key_prefix: str):
             return result
         return wrapper
     return deco
+
+
+@cache(ttl=300, key_prefix="dashboard_stats")
+async def get_dashboard_statistics():
+    async with sessionmaker() as session:
+        stmt = select(func.count(Batch.id.distinct()).label("total_batches"),
+                    func.count(Batch.id.distinct())
+                                .filter(Batch.is_closed.is_(False))
+                                .label("active_batches"),
+                        func.count(Product.id).label("total_products"),
+                        func.count(Product.id).filter(Product.is_aggregated.is_(True))
+                                    .label("aggregated_products")
+                        ).select_from(Batch).outerjoin(Product, Batch.id == Product.batch_id)
+
+        result = await session.execute(stmt)
+        stats = result.one()
+
+        return {
+            "total_batches": stats.total_batches,
+            "active_batches": stats.active_batches,
+            "total_products": stats.total_products,
+            "aggregated_products": stats.aggregated_products,
+            }
 
 
 @cache(ttl=60, key_prefix="batches_list")
@@ -70,7 +94,7 @@ async def get_batch_with_products(batch_id: int):
                 .options(joinedload(Batch.products)))
 
         result = await session.execute(stmt)
-        batch = result.scalar_one_or_none()
+        batch = result.unique().scalar_one_or_none()
         if batch is None:
             return None
         batch = BatchWithProductsResponse.model_validate(batch)

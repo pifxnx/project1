@@ -1,6 +1,6 @@
 from ...core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey
+from sqlalchemy import UniqueConstraint, Index, DateTime, ForeignKey, Date
 from datetime import datetime, date, timezone
 from typing import List, TYPE_CHECKING
 from .work_center import WorkCenter
@@ -22,10 +22,7 @@ class Batch(Base):
     team: Mapped[str]
 
     batch_number: Mapped[int] = mapped_column(nullable=False)
-    batch_date: Mapped[date] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-        )
+    batch_date: Mapped[date] = mapped_column(Date)
         
 
     nomenclature: Mapped[str]
