@@ -24,8 +24,13 @@ class BatchResponse(BatchModel):
     is_closed: bool
     batch_number: int 
     batch_date: date 
-    products: List[ProductResponse]
 
+class BatchWithProductsResponse(BatchModel):
+    id: int
+    is_closed: bool
+    batch_number: int
+    batch_date: date
+    products: List[ProductResponse]
 
 class BatchAlter(BatchModel):
     is_closed: bool | None = None

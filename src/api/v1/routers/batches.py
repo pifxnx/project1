@@ -3,22 +3,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated
 from datetime import date
 from ....core.database import get_db
-from ..schemas.batch import BatchCreate, BatchResponse
+from ..schemas.batch import BatchCreate, BatchResponse, BatchWithProductsResponse
 from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
 from ....tasks.aggregation import aggregate_products_batch_task
+from ....core.cache import get_batch_with_products, get_batches_list
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
-@router.get("/{batch_id}", response_model=BatchResponse)
-async def get_batch(
-    batch_id: int,
-    session: AsyncSession = Depends(get_db)
-):
-    repository = BatchRepository(session=session)
-    service = BatchService(repository)
+@router.get("/{batch_id}", response_model=BatchWithProductsResponse)
+async def get_batch(batch_id: int):
+    return await get_batch_with_products(batch_id)
 
-    return await service.get_by_id(batch_id)
 
 @router.post("/", response_model=BatchResponse)
 async def create_batch(
@@ -32,7 +28,7 @@ async def create_batch(
 
 
 @router.get("/", response_model=List[BatchResponse])
-async def get_batches_filter(
+async def get_batches(
     session: Annotated[AsyncSession, Depends(get_db)],
     is_closed: bool | None = None,
     batch_number: int | None = None,
@@ -41,7 +37,14 @@ async def get_batches_filter(
     shift: str | None = None,
     offset: int = Query(0, ge=0), 
     limit: int = Query(20, le=100),
-) -> List[BatchResponse]:
+):
+    if (batch_number is None and batch_date is None
+        and work_center_id is None and shift is None):
+        return await get_batches_list(
+            is_closed=is_closed,
+            offset=offset,
+            limit=limit
+        )
     repository = BatchRepository(session)
     service = BatchService(repository)
 
