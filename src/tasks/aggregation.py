@@ -1,31 +1,24 @@
-import asyncio
-from ..celery_app import celery_app
-from ..core.database import sessionmaker
-from ..data.repositories.product_repository import ProductRepository
-from ..domain.services.product_service import ProductService
+from sqlalchemy import update
+from datetime import datetime, timezone
+from ..celery_app import session_local, celery_app
+from ..data.models.product import Product
 
 @celery_app.task
-def aggregate_products_batch_task(
-    batch_id: int,
-    unique_codes: list[str]
-):
-    return asyncio.run(
-        _aggregate_products_batch(
-            batch_id,
-            unique_codes
-        )
-    )
+def aggregate_products_task(batch_id: int, unique_codes: list[str]):
+    with session_local() as session:
+        stmt = (update(Product)
+                .where(
+                    Product.batch_id == batch_id,
+                    Product.unique_code.in_(unique_codes),
+                    Product.is_aggregated.is_(False)
+                )
+                .values(
+                    is_aggregated=True,
+                    aggregated_at=datetime.now(timezone.utc)
+                )
+                .returning(Product.id))
 
+        result = session.execute(stmt)
+        session.commit()
 
-async def _aggregate_products_batch(
-        batch_id: int,
-        unique_codes: list[str]
-):
-    async with sessionmaker() as session:
-        repository = ProductRepository(session)
-        service = ProductService(repository)
-
-        return await service.aggregate_products_batch(
-            batch_id,
-            unique_codes
-        )
+        return len(result.scalars().all())
