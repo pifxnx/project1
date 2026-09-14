@@ -81,4 +81,7 @@ class BatchService:
     async def set_is_closed(self, id: int) -> BatchResponse:
         batch = await self.repository.set_is_closed(id)
 
+        if not batch:
+            raise BatchNotFoundException(id)
+
         return BatchResponse.model_validate(batch)
