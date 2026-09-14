@@ -41,7 +41,7 @@ class WebhookDelivery(Base):
     event_type: Mapped[str]
     payload: Mapped[dict] = mapped_column(JSON)
 
-    status: Mapped[str] = mapped_column(Enum(Status), default=Status.pending)
+    status: Mapped[Status] = mapped_column(Enum(Status), default=Status.pending)
     attempts: Mapped[int] = mapped_column(default=0)
     response_status: Mapped[int | None]
     response_body: Mapped[dict | None] = mapped_column(JSON)

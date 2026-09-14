@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
-from ..models.webhook import WebhookSubscription, WebhookDelivery
+from ..models.webhook import WebhookSubscription, WebhookDelivery, Status
 from ...api.v1.schemas.webhook import WebhookSubscriptionAlter
 
 
@@ -88,7 +88,7 @@ class WebhookDeliveryRepository:
     async def update(
             self,
             delivery_id: int,
-            status: str,
+            status: Status,
             response_status: int | None = None,
             response_body: dict | None = None,
             error_message: str | None = None

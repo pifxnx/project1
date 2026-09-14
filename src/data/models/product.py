@@ -2,7 +2,7 @@ from ...core.database import Base
 from .batch import Batch
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, Index, ForeignKey
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 
@@ -21,7 +21,7 @@ class Product(Base):
     is_aggregated: Mapped[bool] = mapped_column(default=False, index=True)
     aggregated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
     batch: Mapped["Batch"] = relationship("Batch", back_populates="products")
 

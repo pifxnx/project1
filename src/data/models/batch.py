@@ -32,10 +32,9 @@ class Batch(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc)
         )
-    shift_end: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-        )
+    shift_end: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
