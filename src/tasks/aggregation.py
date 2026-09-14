@@ -1,11 +1,11 @@
 from sqlalchemy import update
 from datetime import datetime, timezone
-from ..celery_app import session_local, celery_app
+from ..celery_app import celery_app, get_session
 from ..data.models.product import Product
 
 @celery_app.task
 def aggregate_products_task(batch_id: int, unique_codes: list[str]):
-    with session_local() as session:
+    with get_session() as session:
         stmt = (update(Product)
                 .where(
                     Product.batch_id == batch_id,

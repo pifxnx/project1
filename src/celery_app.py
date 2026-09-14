@@ -15,10 +15,14 @@ celery_app = Celery(
 )
 
 
-session_local = None
+_session_local = None
 
 @worker_process_init.connect
 def init_worker_db():
     global session_local
     engine = create_engine(settings.db_url_sync)
     session_local = sessionmaker(engine, expire_on_commit=False)
+
+
+def get_session():
+    return _session_local()

@@ -3,7 +3,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timezone
-from ..celery_app import celery_app, session_local
+from ..celery_app import celery_app, get_session
 from ..data.models.webhook import (
     WebhookSubscription,
     WebhookDelivery
@@ -32,7 +32,7 @@ def create_webhook_delivery(sub_id: int, event: str, payload: dict, session: Ses
 
 @celery_app.task
 def create_webhook_delivery_task(event: str, payload: dict):
-    with session_local() as session:
+    with get_session() as session:
         subs = get_subs_by_event(event, session)
 
         with httpx.Client() as client:
