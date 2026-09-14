@@ -6,7 +6,7 @@ from ...data.models.batch import Batch
 from ..exceptions.batch_exception import (
     BatchNotFoundException, BatchAlreadyExistsException
 )
-from ...tasks.webhooks import create_webhook_delivery
+from ...tasks.webhooks import create_webhook_delivery_task
 
 
 class BatchService:
@@ -21,7 +21,7 @@ class BatchService:
 
         batch = await self.repository.create(batch)
 
-        create_webhook_delivery.delay(
+        create_webhook_delivery_task.delay(
             "batch_created",
             {"id": batch.id, "batch_number": batch.batch_number,
              "batch_date": batch.batch_date.isoformat(), "nomenclature": batch.nomenclature,
@@ -32,8 +32,7 @@ class BatchService:
             id=batch.id,
             is_closed=batch.is_closed,
             batch_number=batch.batch_number,
-            batch_date=batch.batch_date,
-            products=[]
+            batch_date=batch.batch_date
         )
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
@@ -71,7 +70,7 @@ class BatchService:
         if not batch:
             raise BatchNotFoundException(id)
 
-        create_webhook_delivery.delay(
+        create_webhook_delivery_task.delay(
             "batch_updated",
             {"id": batch.id, "batch_number": batch.batch_number,
              "changes": data.model_dump(exclude_unset=True)}

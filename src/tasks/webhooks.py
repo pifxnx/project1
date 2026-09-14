@@ -1,57 +1,71 @@
 import httpx
-import asyncio
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session
+from typing import List
 from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from ..core.config import settings 
-from ..celery_app import celery_app
-from ..data.models.webhook import WebhookDelivery
-from ..data.repositories.webhook_repository import (
-    WebhookDeliveryRepository,
-    WebhookSubscriptionRepository
+from ..celery_app import celery_app, session_local
+from ..data.models.webhook import (
+    WebhookSubscription,
+    WebhookDelivery
 )
 
-@celery_app.task
-def create_webhook_delivery(event: str, payload: dict):
-    return asyncio.run(
-        _create_webhook_delivery(event, payload)
+
+def get_subs_by_event(event: str, session: Session) -> List[WebhookSubscription]:
+    stmt = (select(WebhookSubscription)
+            .where(WebhookSubscription.events.contains([event])))
+    result = session.execute(stmt)
+
+    return list(result.scalars().all())
+
+def create_webhook_delivery(sub_id: int, event: str, payload: dict, session: Session) -> WebhookDelivery:
+    hookdel = WebhookDelivery(
+        subscription_id=sub_id,
+        event_type=event,
+        payload=payload
     )
+    session.add(hookdel)
+    session.commit()
+    session.refresh(hookdel)
+
+    return hookdel
 
 
+@celery_app.task
+def create_webhook_delivery_task(event: str, payload: dict):
+    with session_local() as session:
+        subs = get_subs_by_event(event, session)
 
-async def _create_webhook_delivery(event: str, payload: dict):
-    engine = create_async_engine(settings.db_url)
-    sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+        with httpx.Client() as client:
+            for sub in subs:
+                hookdel = create_webhook_delivery(
+                    sub.id, event, payload, session
+                )
 
-    try:
-        async with sessionmaker() as session:
-            repository = WebhookSubscriptionRepository(session)
-            subs = await repository.get_by_event(event)
-
-            repository = WebhookDeliveryRepository(session)
-            async with httpx.AsyncClient() as client:
-                for sub in subs:
-                    delivery = await repository.create(
-                        WebhookDelivery(
-                            subscription_id=sub.id,
-                            event_type=event,
-                            payload=payload
-                        )
-                    )
-
-                    response = await client.post(
+                try:
+                    response = client.post(
                         url=sub.url,
                         json={
                             "event": event,
                             "data": payload,
                             "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
+                        },
+                        timeout=sub.timeout
                     )
+                    try:
+                        response_body = response.json()
+                    except ValueError:
+                        response_body = None
+                    stmt = (update(WebhookDelivery)
+                            .where(WebhookDelivery.id == hookdel.id)
+                            .values(response_status=response.status_code,
+                                    response_body=response_body,
+                                    status="success" if 200 <= response.status_code < 300 else "failed"))
 
-                    result = await repository.update(
-                        delivery_id=delivery.id,
-                        response_status=response.status_code,
-                        response_body=response.json(),
-                        status="success" if 200 <= response.status_code < 300 else "failed"
-                    )
-    finally:
-        await engine.dispose()
+                except httpx.RequestError as e:
+                    stmt = (update(WebhookDelivery)
+                            .where(WebhookDelivery.id == hookdel.id)
+                            .values(status="failed", error_message=str(e)))
+
+                session.execute(stmt)
+                session.commit()
+                session.refresh(hookdel)
