@@ -22,7 +22,7 @@ class Batch(Base):
     team: Mapped[str]
 
     batch_number: Mapped[int] = mapped_column(nullable=False)
-    batch_date: Mapped[date] = mapped_column(Date, default=date.today())
+    batch_date: Mapped[date] = mapped_column(Date, default=lambda: date.today())
         
 
     nomenclature: Mapped[str]

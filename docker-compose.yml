@@ -27,3 +27,12 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"

@@ -7,6 +7,11 @@ class Settings(BaseSettings):
     db_url_sync: str
     rabbitmq_url: str
 
+    minio_endpoint: str
+    minio_access_key: str
+    minio_secret_key: str
+    minio_secure: bool
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
