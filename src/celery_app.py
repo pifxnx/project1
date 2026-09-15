@@ -6,7 +6,7 @@ from .core.config import settings
 
 celery_app = Celery(
     "tasks", 
-    broker="amqp://guest:guest@localhost:5672//",
+    broker=settings.rabbitmq_url,
     backend="redis://localhost:6379/0",
     include=[
         "src.tasks.aggregation",

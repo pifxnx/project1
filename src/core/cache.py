@@ -34,7 +34,7 @@ def cache(ttl: int, key_prefix: str):
                 return json.loads(cached)
 
             result = await func(*args, **kwargs)
-            data = json.dumps(result)
+            data = json.dumps(result, default=str)
 
             await r.set(key, data, ex=ttl)
 

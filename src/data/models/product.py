@@ -21,7 +21,7 @@ class Product(Base):
     is_aggregated: Mapped[bool] = mapped_column(default=False, index=True)
     aggregated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     batch: Mapped["Batch"] = relationship("Batch", back_populates="products")
 
