@@ -1,20 +1,13 @@
 import pytest
-from src.data.models.webhook import WebhookSubscription, WebhookDelivery
-from src.api.v1.schemas.webhook import WebhookSubscriptionCreate
-from src.api.v1.schemas.batch import BatchCreate
-from src.data.repositories.webhook_repository import (
-    WebhookSubscriptionRepository,
-    WebhookDeliveryRepository
-)
-from src.domain.services.webhook_service import (
-    WebhookSubscriptionService,
-    WebhookDeliveryService
-)
-from src.tasks.webhooks import _create_webhook_delivery
+from sqlalchemy import select
+from src.data.repositories.webhook_repository import WebhookDeliveryRepository
+from src.tasks.webhooks import create_webhook_delivery_task
+from src.data.models.webhook import WebhookDelivery
 
 
-@pytest.mark.asyncio
-async def test_create_webhook_delivery(get_test_db, create_subscription, create_batch):
+
+def test_create_webhook_delivery(get_test_db_sync, create_subscription,
+                                 create_batch, httpx_mock, patch_get_session):
     payload = {
         "id": create_batch.id,
         "batch_number": create_batch.batch_number,
@@ -22,13 +15,21 @@ async def test_create_webhook_delivery(get_test_db, create_subscription, create_
         "nomenclature": create_batch.nomenclature,
         "work_center": create_batch.work_center_id
     }
-    await _create_webhook_delivery("batch_created", payload)
+
     sub = create_subscription
-    repository = WebhookDeliveryRepository(get_test_db)
+    httpx_mock.add_response(
+        url=sub.url,
+        method="POST",
+        status_code=200,
+        json={"ok": True}
+    )
 
-    deliveries = await repository.get_by_sub_id(sub.id)
-    delivery = deliveries[0]
+    create_webhook_delivery_task("batch_created", payload)
 
-    assert delivery.payload == payload
-    assert delivery.event_type == "batch_created"
-    assert delivery.response_status == 200
+    stmt = (select(WebhookDelivery)
+            .where(WebhookDelivery.subscription_id == sub.id))
+    hookdel = get_test_db_sync.execute(stmt).scalar_one()
+
+    assert hookdel.status.value == "success"
+    assert hookdel.event_type == "batch_created"
+    assert hookdel.response_status == 200
