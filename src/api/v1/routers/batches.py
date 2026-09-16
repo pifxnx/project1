@@ -6,6 +6,8 @@ from ....core.database import get_db
 from ..schemas.batch import BatchCreate, BatchResponse, BatchWithProductsResponse
 from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
+from ....data.repositories.product_repository import ProductRepository
+from ....domain.services.product_service import ProductService
 from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
 from ....tasks.reports import generate_batch_report
@@ -72,16 +74,14 @@ async def set_is_closed(
 
 @router.post("/{batch_id}/aggregate")
 async def aggregate(
+    session: Annotated[AsyncSession, Depends(get_db)],
     batch_id: int,
     unique_codes: list[str]
 ) -> dict:
-   result = aggregate_products_task.delay(batch_id, unique_codes)
+    repository = ProductRepository(session)
+    service = ProductService(repository)
 
-   return {
-       "task_id": result.id,
-       "status": result.status,
-       "message": "Aggregation task started"
-   }
+    return await service.aggregate_products_batch(batch_id, unique_codes)
 
 
 @router.post("/{batch_id}/reports")

@@ -5,6 +5,8 @@ from ..exceptions.product_exception import (
     ProductNotFoundException,
     ProductAlreadyExistsException
 )
+from ...tasks.aggregation import aggregate_products_task
+from ...tasks.webhooks import create_webhook_delivery_task
 from typing import List
 
 
@@ -35,46 +37,12 @@ class ProductService:
             batch_id: int,
             unique_codes: list[str]
     ) -> dict:
-        products = await self.repository.get_by_batch_id_and_unique_codes(
-            batch_id, unique_codes
+        result = aggregate_products_task.delay(batch_id, unique_codes)
+        create_webhook_delivery_task.delay(
+            "product_aggregated",
+            {"batch_id": batch_id,
+             "unique_codes": unique_codes}
         )
 
-        requested_codes = set(unique_codes)
-        found_codes = set()
-        codes_to_aggregate = []
-        errors = []
-
-        for product in products:
-            found_codes.add(product.unique_code)
-
-            if product.is_aggregated:
-                errors.append(
-                    {"code": product.unique_code, "reason": "already aggregated"}
-                )
-            else:
-                codes_to_aggregate.append(product.unique_code)
-
-        missing_codes = requested_codes - found_codes
-
-        for code in missing_codes:
-            errors.append(
-                {"code": code, "reason": "product not found"}
-            )
-
-        aggregated = 0
-
-        if codes_to_aggregate:
-            aggregated = await self.repository.aggregate_products(
-                batch_id,
-                codes_to_aggregate
-            )
-
-        failed = len(errors)
-
-        return {
-            "success": True,
-            "total": len(unique_codes),
-            "aggregated": aggregated,
-            "failed": failed,
-            "errors": errors
-        }
+        return {"id": result.id,
+                "status": result.status}
