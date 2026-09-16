@@ -6,7 +6,7 @@ from ....core.database import get_db
 from ..schemas.batch import BatchCreate, BatchResponse, BatchWithProductsResponse
 from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
-from ....tasks.aggregation import aggregate_products_batch_task
+from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
 
 router = APIRouter(prefix="/batches", tags=["batches"])
@@ -74,7 +74,7 @@ async def aggregate(
     batch_id: int,
     unique_codes: list[str]
 ) -> dict:
-   result = aggregate_products_batch_task.delay(batch_id, unique_codes)
+   result = aggregate_products_task.delay(batch_id, unique_codes)
 
    return {
        "task_id": result.id,

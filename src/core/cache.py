@@ -58,7 +58,7 @@ async def get_dashboard_statistics():
         result = await session.execute(stmt)
         stats = result.one()
 
-        aggr_rate = stats.total_products / 100 * stats.aggregated_products
+        aggr_rate = stats.aggregated_products / stats.total_products * 100 if stats.total_products > 0 else 0
 
         return {
             "total_batches": stats.total_batches,
@@ -66,7 +66,7 @@ async def get_dashboard_statistics():
             "total_products": stats.total_products,
             "aggregated_products": stats.aggregated_products,
             "aggregation_rate": aggr_rate,
-            "cached_at": datetime.now(timezone.utc)
+            "cached_at": datetime.now(timezone.utc).isoformat()
             }
 
 

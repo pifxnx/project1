@@ -29,10 +29,16 @@ services:
       - "6379:6379"
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
       - ./minio_data:/data
     command: server /data --console-address ":9001"
+
+  # minio-init:
+  #   build: .
+  #   command: python -m scripts.init_minio
+  #   depends_on:
+  #     [minio]

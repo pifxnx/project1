@@ -1,4 +1,4 @@
-from ..src.core.storage import minio
+from src.core.storage import minio
 
 BUCKETS = {
     "reports": "Сегенерированные отчеты",
@@ -11,3 +11,7 @@ def initialize_minio_buckets():
         if not minio.client.bucket_exists(bucket_name):
             minio.client.make_bucket(bucket_name)
             print(f"Created bucket: {bucket_name}")
+
+
+if __name__ == "__main__":
+    initialize_minio_buckets()

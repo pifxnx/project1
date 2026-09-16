@@ -10,5 +10,9 @@ class WorkCenter(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     identifier: Mapped[str] = mapped_column(unique=True, nullable=False, index=True)
     name: Mapped[str]
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), 
+        default=datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+        )
