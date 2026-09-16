@@ -8,6 +8,7 @@ from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
 from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
+from ....tasks.reports import generate_batch_report
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
@@ -81,3 +82,14 @@ async def aggregate(
        "status": result.status,
        "message": "Aggregation task started"
    }
+
+
+@router.post("/{batch_id}/reports")
+async def create_report(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    batch_id: int
+) -> dict:
+    repository = BatchRepository(session)
+    service = BatchService(repository)
+
+    return await service.create_batch_report(batch_id)

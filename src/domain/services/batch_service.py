@@ -7,6 +7,7 @@ from ..exceptions.batch_exception import (
     BatchNotFoundException, BatchAlreadyExistsException
 )
 from ...tasks.webhooks import create_webhook_delivery_task
+from ...tasks.reports import generate_batch_report
 
 
 class BatchService:
@@ -85,3 +86,17 @@ class BatchService:
             raise BatchNotFoundException(id)
 
         return BatchResponse.model_validate(batch)
+
+    async def create_batch_report(self, batch_id: int):
+        batch = await self.repository.get_by_id(batch_id)
+        if not batch:
+            raise BatchNotFoundException(batch_id)
+
+        result = generate_batch_report.delay(batch_id)
+        create_webhook_delivery_task.delay(
+            "batch_report_created",
+            {"id": batch_id}
+        )
+
+        return {"task_id": result.id,
+                "status": result.status}
