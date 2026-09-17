@@ -11,6 +11,7 @@ from ..exceptions.batch_exception import (
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...tasks.reports import generate_batch_report
 from ...tasks.imports import import_batches_task
+from ...tasks.exports import export_batches_task
 from ...core.storage import minio
 
 
@@ -129,3 +130,8 @@ class ImportExportService:
 
         return {"id": result.id,
                 "status": result.status}
+
+    async def export_batches(self, filters):
+        result = export_batches_task.delay(filters)
+
+        return {"id": result.id, "status": result.status}

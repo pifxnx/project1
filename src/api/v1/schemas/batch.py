@@ -42,3 +42,11 @@ class BatchAlter(BatchModel):
     shift_start: datetime | None = None
     shift_end: datetime | None = None
 
+
+class BatchExportFilters(BaseModel):
+    is_closed: bool | None = None
+    batch_number: int | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+    work_center_id: int | None = None
+    shift: str | None = None

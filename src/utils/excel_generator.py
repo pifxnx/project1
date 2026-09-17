@@ -28,3 +28,27 @@ def generate_batch_report_excel(batch: dict, products: list[dict],
         ws3.append([k, v])
 
     wb.save(file_path)
+
+
+def generate_export_batches_excel(batches: list[dict], file_path: str):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Партии"
+
+    headers = [
+        "Номер партии", "Дата партии", "Статус", "Рабочий центр",
+        "Смена", "Бригада", "Номенклатура", "Код ЕКН",
+        "Всего продукции", "Аггрегировано"
+    ]
+    ws.append(headers)
+
+    for b in batches:
+        ws.append([
+            b["batch_number"], b["batch_date"],
+            "Закрыта" if b["is_closed"] else "Открыта",
+            b["work_center_id"], b["shift"], b["team"],
+            b["nomenclature"], b["ekn_code"],
+            b["total_products"], b["aggregated_products"],
+        ])
+
+    wb.save(file_path)
