@@ -1,3 +1,5 @@
+import os
+from uuid import uuid4
 from datetime import datetime, date, timezone
 from typing import List
 from ...data.repositories.batch_repository import BatchRepository
@@ -8,6 +10,7 @@ from ..exceptions.batch_exception import (
 )
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...tasks.reports import generate_batch_report
+from ...core.storage import minio
 
 
 class BatchService:
@@ -106,3 +109,19 @@ class BatchService:
 
         return {"task_id": result.id,
                 "status": result.status}
+
+
+class ImportExportService:
+    async def import_batch(self, data: bytes, filename: str):
+        object_name = f"{uuid4()}_{filename}"
+        path = f"/tmp/{object_name}.xlsx"
+
+        with open(path, "wb") as f:
+            f.write(data)
+
+        try:
+            minio.upload_file("imports", path, object_name)
+        finally:
+            os.remove(path)
+
+        result = ## TASK
