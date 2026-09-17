@@ -74,12 +74,10 @@ async def set_is_closed(
 
 @router.post("/{batch_id}/aggregate")
 async def aggregate(
-    session: Annotated[AsyncSession, Depends(get_db)],
     batch_id: int,
     unique_codes: list[str]
 ) -> dict:
-    repository = ProductRepository(session)
-    service = ProductService(repository)
+    service = AggregationService()
 
     return await service.aggregate_products_batch(batch_id, unique_codes)
 
