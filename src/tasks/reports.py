@@ -58,10 +58,10 @@ def generate_batch_report(
         data = get_batch_report_data(batch_id, session)
 
     batch_info, products, stats = data
-    file_name = f"batch_{batch_info["Номер партии"]}_report.xlsx"
+    file_name = f"batch_{batch_info['Номер партии']}_report.xlsx"
     file_path = f"/tmp/{file_name}"
     try:
-        buffer = generate_batch_report_excel(batch_info, products, stats, file_path)
+        generate_batch_report_excel(batch_info, products, stats, file_path)
 
         file_url = minio.upload_file("reports", file_path, file_name)
         file_size = os.path.getsize(file_path)

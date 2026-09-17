@@ -41,11 +41,6 @@ class AggregationService:
             unique_codes: list[str]
     ) -> dict:
         result = aggregate_products_task.delay(batch_id, unique_codes)
-        create_webhook_delivery_task.delay(
-            "product_aggregated",
-            {"batch_id": batch_id,
-             "unique_codes": unique_codes}
-        )
 
         return {"id": result.id,
                 "status": result.status}

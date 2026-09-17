@@ -9,13 +9,10 @@ from ..data.models.batch import Batch
 from ..data.models.product import Product
 from ..domain.services.batch_service import BatchService
 from ..core.database import sessionmaker
+from ..core.config import settings
 
 
-redis = Redis(
-    host="localhost",
-    port=6379,
-    decode_responses=True
-)
+redis = Redis.from_url(settings.redis_url, decode_responses=True)
 
 async def get_redis() -> Redis:
     return redis

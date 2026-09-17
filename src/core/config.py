@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     db_url: str
     db_url_sync: str
     rabbitmq_url: str
+    redis_url: str
 
     minio_endpoint: str
     minio_access_key: str

@@ -7,7 +7,7 @@ from .core.config import settings
 celery_app = Celery(
     "tasks", 
     broker=settings.rabbitmq_url,
-    backend="redis://localhost:6379/0",
+    backend=settings.redis_url,
     include=[
         "src.tasks.aggregation",
         "src.tasks.webhooks"

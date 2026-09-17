@@ -38,7 +38,7 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
                             .returning(Product.id))
             result = session.execute(stmt)
             session.commit()
-            aggregated = len(result.scalars().all)
+            aggregated = len(result.scalars().all())
 
         result = {
             "total": len(unique_codes),
@@ -49,7 +49,7 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
 
         create_webhook_delivery_task.delay(
             "aggregation",
-            "result": **result
+            "result": result
         )
 
         return result

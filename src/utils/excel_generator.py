@@ -27,5 +27,4 @@ def generate_batch_report_excel(batch: dict, products: list[dict],
     for k, v in stats.items():
         ws3.append([k, v])
 
-    buffer = io.BytesIO()
     wb.save(file_path)

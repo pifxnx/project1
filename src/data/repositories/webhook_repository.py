@@ -28,7 +28,8 @@ class WebhookSubscriptionRepository:
 
     async def get_by_event(self, event: str) -> List[WebhookSubscription]:
         stmt = (select(WebhookSubscription)
-                .where(WebhookSubscription.events.contains([event])))
+                .where(WebhookSubscription.events.contains([event]),
+                       WebhookSubscription.is_active == True))
 
         result = await self.session.execute(stmt)
 
