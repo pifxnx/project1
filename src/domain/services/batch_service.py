@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime, date, timezone
 from typing import List
 from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse, BatchAlter
@@ -84,6 +84,12 @@ class BatchService:
 
         if not batch:
             raise BatchNotFoundException(id)
+
+        create_webhook_delivery_task.delay(
+            "batch_closed",
+            {"id": batch.id, "batch_number": batch.batch_number,
+             "closed_at": batch.closed_at} ##ДОПИСАТЬ STATISTICS
+        )
 
         return BatchResponse.model_validate(batch)
 

@@ -7,7 +7,7 @@ from ..schemas.batch import BatchCreate, BatchResponse, BatchWithProductsRespons
 from ....domain.services.batch_service import BatchService
 from ....data.repositories.batch_repository import BatchRepository
 from ....data.repositories.product_repository import ProductRepository
-from ....domain.services.product_service import ProductService
+from ....domain.services.product_service import ProductService, AggregationService
 from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
 from ....tasks.reports import generate_batch_report

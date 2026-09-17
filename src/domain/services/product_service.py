@@ -32,6 +32,9 @@ class ProductService:
 
         return [ProductResponse.model_validate(product) for product in products]
 
+
+
+class AggregationService:
     async def aggregate_products_batch(
             self,
             batch_id: int,

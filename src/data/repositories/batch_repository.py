@@ -71,7 +71,7 @@ class BatchRepository:
     async def set_is_closed(self, id: int) -> Batch | None:
         batch = await self.session.get(Batch, id)
         if not batch:
-            return None ### дописать исключение
+            return None
 
         if not batch.is_closed:
             batch.is_closed = True
