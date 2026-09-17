@@ -10,7 +10,9 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=[
         "src.tasks.aggregation",
-        "src.tasks.webhooks"
+        "src.tasks.webhooks",
+        "src.tasks.reports",
+        "srs.tasks.imports"
         ]
 )
 

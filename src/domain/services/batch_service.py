@@ -10,6 +10,7 @@ from ..exceptions.batch_exception import (
 )
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...tasks.reports import generate_batch_report
+from ...tasks.imports import import_batches_task
 from ...core.storage import minio
 
 
@@ -124,4 +125,7 @@ class ImportExportService:
         finally:
             os.remove(path)
 
-        result = ## TASK
+        result = import_batches_task.delay(object_name, path)
+
+        return {"id": result.id,
+                "status": result.status}

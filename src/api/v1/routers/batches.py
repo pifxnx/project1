@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated
 from datetime import date
 from ....core.database import get_db
 from ..schemas.batch import BatchCreate, BatchResponse, BatchWithProductsResponse
-from ....domain.services.batch_service import BatchService
+from ....domain.services.batch_service import BatchService, ImportExportService
 from ....data.repositories.batch_repository import BatchRepository
 from ....data.repositories.product_repository import ProductRepository
 from ....domain.services.product_service import ProductService, AggregationService
@@ -91,3 +91,14 @@ async def create_report(
     service = BatchService(repository)
 
     return await service.create_batch_report(batch_id)
+
+
+@router.post("/import")
+async def upload_file(file: UploadFile):
+    content = await file.read()
+
+    if not file.filename:
+        return
+
+    service = ImportExportService()
+    return await service.import_batch(content, file.filename)
