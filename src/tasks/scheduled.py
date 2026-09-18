@@ -21,7 +21,7 @@ def auto_close_expired_batches(name="tasks.auto_close_expired_batches"):
 
 
 @celery_app.task
-def retry_failed_webhookd(name="tasks.retry_failed_webhooks"):
+def retry_failed_webhook_task(name="tasks.retry_failed_webhooks"):
     with get_session() as session:
         stmt = (select(WebhookDelivery)
                 .join(WebhookSubscription)
