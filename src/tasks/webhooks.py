@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 from ..celery_app import celery_app, get_session
 from ..data.models.webhook import (
     WebhookSubscription,
-    WebhookDelivery
+    WebhookDelivery,
+    Status
 )
 
 
@@ -29,43 +30,47 @@ def create_webhook_delivery(sub_id: int, event: str, payload: dict, session: Ses
 
     return hookdel
 
+def send_webhook_delivery(hookdel: WebhookDelivery, subscription: WebhookSubscription, session: Session):
+    hookdel.attempts += 1
+
+    try:
+        with httpx.Client() as client:
+            response = client.post(
+                url=subscription.url,
+                json={
+                    "event": hookdel.event_type,
+                    "data": hookdel.payload,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                },
+                timeout=subscription.timeout
+            )
+        try:
+            response_body = response.json()
+        except ValueError:
+            response_body = None
+
+        hookdel.response_status = response.status_code
+        hookdel.response_body = response_body
+        hookdel.status = Status.success if 200 <= response.status_code < 300 else Status.failed
+        hookdel.error_message = None
+
+    except httpx.RequestError as e:
+        hookdel.status = Status.failed
+        hookdel.error_message = str(e)
+
+    if hookdel.status == Status.success:
+        hookdel.delivered_at = datetime.now(timezone.utc)
+
+    session.commit()
+    session.refresh(hookdel)
+    return hookdel
+
 
 @celery_app.task
 def create_webhook_delivery_task(event: str, payload: dict):
     with get_session() as session:
         subs = get_subs_by_event(event, session)
 
-        with httpx.Client() as client:
-            for sub in subs:
-                hookdel = create_webhook_delivery(
-                    sub.id, event, payload, session
-                )
-
-                try:
-                    response = client.post(
-                        url=sub.url,
-                        json={
-                            "event": event,
-                            "data": payload,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        },
-                        timeout=sub.timeout
-                    )
-                    try:
-                        response_body = response.json()
-                    except ValueError:
-                        response_body = None
-                    stmt = (update(WebhookDelivery)
-                            .where(WebhookDelivery.id == hookdel.id)
-                            .values(response_status=response.status_code,
-                                    response_body=response_body,
-                                    status="success" if 200 <= response.status_code < 300 else "failed"))
-
-                except httpx.RequestError as e:
-                    stmt = (update(WebhookDelivery)
-                            .where(WebhookDelivery.id == hookdel.id)
-                            .values(status="failed", error_message=str(e)))
-
-                session.execute(stmt)
-                session.commit()
-                session.refresh(hookdel)
+        for sub in subs:
+            hookdel = create_webhook_delivery(sub.id, event, payload, session)
+            send_webhook_delivery(hookdel, sub, session)
