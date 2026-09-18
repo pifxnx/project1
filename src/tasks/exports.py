@@ -39,7 +39,7 @@ def get_batches_filters(
     return list(result.scalars().unique().all())
 
 @celery_app.task
-def export_batches_task(object_name: str, path: str, filters: dict):
+def export_batches_task(filters: dict):
     with get_session() as session:
         batches = get_batches_filters(session, **filters)
 

@@ -49,7 +49,7 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
 
         create_webhook_delivery_task.delay(
             "aggregation",
-            "result": result
+            result
         )
 
         return result

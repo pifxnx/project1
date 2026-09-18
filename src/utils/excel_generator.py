@@ -1,5 +1,4 @@
 from openpyxl import Workbook
-import io
 
 
 def generate_batch_report_excel(batch: dict, products: list[dict],

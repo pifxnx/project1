@@ -5,6 +5,7 @@ from ..core.storage import minio
 from ..data.models.batch import Batch
 from .webhooks import create_webhook_delivery_task
 from ..api.v1.schemas.batch import BatchCreate
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from psycopg2.errors import UniqueViolation, NotNullViolation
 
@@ -27,6 +28,10 @@ def import_batches_task(
                         data = BatchCreate(**row)
                         session.add(Batch(**data.model_dump()))
                         session.flush()
+                except ValidationError as e:
+                    session.rollback()
+                    stats["errors"].append({"row": i, "error": "validation error"})
+                    stats["skipped"] += 1
                 except IntegrityError as e:
                     session.rollback()
                     error = e.orig
@@ -34,6 +39,8 @@ def import_batches_task(
                         reason = "duplicate batch number and date"
                     elif isinstance(error, NotNullViolation):
                         reason = "not null violation"
+                    else:
+                        reason = str(error)
                     stats["errors"].append({"row": i, "error": reason})
                     stats["skipped"] += 1
                 else:
