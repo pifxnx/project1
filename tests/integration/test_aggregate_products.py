@@ -1,13 +1,12 @@
 from sqlalchemy import select
 from src.data.models.product import Product
 from src.data.repositories.product_repository import ProductRepository
-from src.domain.services.product_service import ProductService
+from src.domain.services.product_service import ProductService, AggregationService
 
 
 async def test_aggregate_product(get_test_db, create_product):
     product = await create_product("test_123")
-    repository = ProductRepository(get_test_db)
-    service = ProductService(repository)
+    service = AggregationService()
 
     result = await service.aggregate_products_batch(
         batch_id=product.batch_id,
@@ -36,8 +35,7 @@ async def test_multiple_products(get_test_db, create_product):
     p2.is_aggregated = True
     await get_test_db.commit()
 
-    repository = ProductRepository(get_test_db)
-    service = ProductService(repository)
+    service = AggregationService()
 
     result = await service.aggregate_products_batch(
         batch_id=p1.batch_id,

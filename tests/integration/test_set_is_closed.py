@@ -21,6 +21,3 @@ async def test_is_closed_on_and_off(get_test_db, create_batch):
 
     batch = await service.get_by_id(create_batch.id)
     assert batch.is_closed == True
-
-    # await service.set_is_closed(batch.id)
-    # assert batch.is_closed == False

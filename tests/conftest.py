@@ -40,6 +40,7 @@ def get_test_db_sync():
 
     engine.dispose()
 
+
 @pytest.fixture
 def patch_get_session(monkeypatch, get_test_db_sync):
     monkeypatch.setattr("src.tasks.webhooks.get_session", lambda: get_test_db_sync)
