@@ -13,6 +13,7 @@ from ...tasks.reports import generate_batch_report
 from ...tasks.imports import import_batches_task
 from ...tasks.exports import export_batches_task
 from ...core.storage import minio
+from ...core.cache import redis_client
 
 
 class BatchService:
@@ -33,6 +34,7 @@ class BatchService:
              "batch_date": batch.batch_date.isoformat(), "nomenclature": batch.nomenclature,
              "work_center": batch.work_center_id}
         )
+        await redis_client.delete("dashboard_stats")
 
         return BatchResponse(
             id=batch.id,
@@ -79,8 +81,11 @@ class BatchService:
         create_webhook_delivery_task.delay(
             "batch_updated",
             {"id": batch.id, "batch_number": batch.batch_number,
-             "changes": data.model_dump(exclude_unset=True)}
+             "changes": data.model_dump(mode="json", exclude_unset=True)}
         )
+        await redis_client.delete(f"batch_detail:{id}")
+        await redis_client.delete(f"batch_statistics:{id}")
+        await redis_client.delete(f"dashboard_stats")
 
         return BatchResponse.model_validate(batch)
 
@@ -93,7 +98,7 @@ class BatchService:
         create_webhook_delivery_task.delay(
             "batch_closed",
             {"id": batch.id, "batch_number": batch.batch_number,
-             "closed_at": batch.closed_at} ##ДОПИСАТЬ STATISTICS
+             "closed_at": batch.closed_at.isoformat()} ##ДОПИСАТЬ STATISTICS
         )
 
         return BatchResponse.model_validate(batch)

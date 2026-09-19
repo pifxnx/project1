@@ -12,17 +12,24 @@ from ..core.database import sessionmaker
 from ..core.config import settings
 
 
-redis = Redis.from_url(settings.redis_url, decode_responses=True)
+redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 
 async def get_redis() -> Redis:
-    return redis
+    return redis_client
 
+def make_key(*args, **kwargs):
+    key = ""
+    if args:
+        key += ':'.join(str(a) for a in args)
+    if kwargs:
+        key += ':' + ':'.join(f"{k}={v}" for k, v in sorted(kwargs.items()))
 
+    return key
 
 def cache(ttl: int, key_prefix: str):
     def deco(func):
         async def wrapper(*args, **kwargs):
-            key = f"{key_prefix}:{args}:{kwargs}"
+            key = key_prefix + ':' + make_key(*args, **kwargs)
 
             r = await get_redis()
 

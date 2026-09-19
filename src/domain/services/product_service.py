@@ -7,6 +7,7 @@ from ..exceptions.product_exception import (
 )
 from ...tasks.aggregation import aggregate_products_task
 from ...tasks.webhooks import create_webhook_delivery_task
+from ...core.cache import redis_client
 from typing import List
 
 
@@ -41,6 +42,10 @@ class AggregationService:
             unique_codes: list[str]
     ) -> dict:
         result = aggregate_products_task.delay(batch_id, unique_codes)
+
+        await redis_client.delete(f"batch_detail:{batch_id}") 
+        await redis_client.delete(f"bash_statistics:{batch_id}")
+        await redis_client.delete("dashboard_stats")
 
         return {"id": result.id,
                 "status": result.status}
