@@ -11,14 +11,10 @@ from psycopg2.errors import UniqueViolation, NotNullViolation
 
 
 @celery_app.task
-def import_batches_task(
-    object_name: str,
-    path: str
-):
+def import_batches_task(object_name: str, path: str):
     minio.download_file("imports", object_name, path)
 
-    stats = {"total_rows": 0, "created": 0,
-             "skipped": 0, "errors": []}
+    stats = {"total_rows": 0, "created": 0, "skipped": 0, "errors": []}
     try:
         with get_session() as session:
             for i, row in enumerate(parse_batches_excel(path), 1):
@@ -51,7 +47,5 @@ def import_batches_task(
     finally:
         os.remove(path)
 
-    create_webhook_delivery_task.delay(
-        "batch_imported",
-        stats
-    )
+    create_webhook_delivery_task.delay("import_completed", stats)
+

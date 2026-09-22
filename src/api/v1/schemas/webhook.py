@@ -6,21 +6,24 @@ from typing import List
 class WebhookSubscriptionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+
 class WebhookSubscriptionCreate(WebhookSubscriptionModel):
     events: list[str]
     # secret_key: str
-    retry_count: int | None = None
-    timeout: int | None = None 
+    retry_count: int | None = 3
+    timeout: int | None = 10
+
 
 class WebhookSubscriptionResponse(WebhookSubscriptionModel):
-    id: int 
-    url: str 
+    id: int
+    url: str
     events: list[str]
-    is_active: bool 
+    is_active: bool
     retry_count: int
-    timeout: int 
+    timeout: int
     created_at: datetime
     updated_at: datetime
+
 
 class WebhookSubscriptionListResponse(WebhookSubscriptionModel):
     items: List[WebhookSubscriptionResponse]
@@ -28,7 +31,7 @@ class WebhookSubscriptionListResponse(WebhookSubscriptionModel):
 
 
 class WebhookSubscriptionAlter(WebhookSubscriptionModel):
-    url: str | None = None 
+    url: str | None = None
     events: list[str] | None = None
     is_active: bool | None = None
     retry_count: int | None = None
@@ -38,19 +41,21 @@ class WebhookSubscriptionAlter(WebhookSubscriptionModel):
 class WebhookDeliveryModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+
 class WebhookDeliveryCreate(WebhookDeliveryModel):
-    subscription_id: int 
+    subscription_id: int
     event_type: str
     payload: dict
 
+
 class WebhookDeliveryResponse(WebhookDeliveryModel):
-    event_type: str 
+    event_type: str
     payload: dict
-    status: str 
+    status: str
     attempts: int
     response_status: int | None
     response_body: dict | None
     error_message: str | None
     created_at: datetime
-    delivered_at: datetime | None 
-    
+    delivered_at: datetime | None
+

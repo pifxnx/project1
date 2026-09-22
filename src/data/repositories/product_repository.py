@@ -1,5 +1,5 @@
 from ..models.product import Product
-from sqlalchemy.ext.asyncio import AsyncSession 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from typing import List
 from datetime import datetime, timezone
@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 class ProductRepository:
     def __init__(self, session: AsyncSession):
-        self.session = session 
+        self.session = session
 
     async def create(self, product: Product) -> Product:
         self.session.add(product)
@@ -22,7 +22,6 @@ class ProductRepository:
 
         return result.scalar_one_or_none()
 
-
     async def get_by_batch_id(self, batch_id: int) -> List[Product]:
         stmt = select(Product).where(Product.batch_id == batch_id)
         result = await self.session.execute(stmt)
@@ -30,31 +29,24 @@ class ProductRepository:
         return list(result.scalars().all())
 
     async def get_by_batch_id_and_unique_codes(
-            self,
-            batch_id: int,
-            unique_codes: list[str]
+        self, batch_id: int, unique_codes: list[str]
     ) -> List[Product]:
-        stmt = select(Product).where(Product.batch_id == batch_id,
-                                    Product.unique_code.in_(unique_codes))
+        stmt = select(Product).where(
+            Product.batch_id == batch_id, Product.unique_code.in_(unique_codes)
+        )
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
 
-    async def aggregate_products(
-            self,
-            batch_id: int,
-            unique_codes: list[str]
-    ) -> int:
-        stmt = (update(Product)
+    async def aggregate_products(self, batch_id: int, unique_codes: list[str]) -> int:
+        stmt = (
+            update(Product)
             .where(
                 Product.batch_id == batch_id,
                 Product.unique_code.in_(unique_codes),
-                Product.is_aggregated.is_(False)
+                Product.is_aggregated.is_(False),
             )
-            .values(
-                is_aggregated=True,
-                aggregated_at=datetime.now(timezone.utc)
-            )
+            .values(is_aggregated=True, aggregated_at=datetime.now(timezone.utc))
             .returning(Product.id)
         )
 
@@ -62,3 +54,4 @@ class ProductRepository:
         await self.session.commit()
 
         return len(result.scalars().all())
+

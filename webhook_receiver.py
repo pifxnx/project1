@@ -9,9 +9,11 @@ def webhook():
     data = request.json
 
     print(data)
+    print("webhook received")
 
     return {"message": "ok"}, 200
 
 
 if __name__ == "__main__":
     app.run()
+

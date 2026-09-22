@@ -3,12 +3,12 @@ from ...data.models.product import Product
 from ...api.v1.schemas.product import ProductCreate, ProductResponse
 from ..exceptions.product_exception import (
     ProductNotFoundException,
-    ProductAlreadyExistsException
+    ProductAlreadyExistsException,
 )
 from ...tasks.aggregation import aggregate_products_task
-from ...tasks.webhooks import create_webhook_delivery_task
 from ...core.cache import redis_client
 from typing import List
+from sqlalchemy.exc import IntegrityError
 
 
 class ProductService:
@@ -17,7 +17,10 @@ class ProductService:
 
     async def create(self, data: ProductCreate) -> ProductResponse:
         product = Product(**data.model_dump())
-        product = await self.repository.create(product)
+        try:
+            product = await self.repository.create(product)
+        except IntegrityError:
+            raise ProductAlreadyExistsException()
         return ProductResponse.model_validate(product)
 
     async def get_by_id(self, product_id: int) -> ProductResponse | None:
@@ -34,18 +37,15 @@ class ProductService:
         return [ProductResponse.model_validate(product) for product in products]
 
 
-
 class AggregationService:
     async def aggregate_products_batch(
-            self,
-            batch_id: int,
-            unique_codes: list[str]
+        self, batch_id: int, unique_codes: list[str]
     ) -> dict:
         result = aggregate_products_task.delay(batch_id, unique_codes)
 
-        await redis_client.delete(f"batch_detail:{batch_id}") 
+        await redis_client.delete(f"batch_detail:{batch_id}")
         await redis_client.delete(f"bash_statistics:{batch_id}")
         await redis_client.delete("dashboard_stats")
 
-        return {"id": result.id,
-                "status": result.status}
+        return {"id": result.id, "status": result.status}
+

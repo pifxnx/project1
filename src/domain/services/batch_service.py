@@ -6,7 +6,8 @@ from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse, BatchAlter
 from ...data.models.batch import Batch
 from ..exceptions.batch_exception import (
-    BatchNotFoundException, BatchAlreadyExistsException
+    BatchNotFoundException,
+    BatchAlreadyExistsException,
 )
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...tasks.reports import generate_batch_report
@@ -22,7 +23,9 @@ class BatchService:
 
     async def create(self, data: BatchCreate) -> BatchResponse:
         batch = Batch(**data.model_dump())
-        existing = await self.repository.get_by_number_and_date(batch.batch_number, batch.batch_date)
+        existing = await self.repository.get_by_number_and_date(
+            batch.batch_number, batch.batch_date
+        )
         if existing:
             raise BatchAlreadyExistsException()
 
@@ -30,9 +33,13 @@ class BatchService:
 
         create_webhook_delivery_task.delay(
             "batch_created",
-            {"id": batch.id, "batch_number": batch.batch_number,
-             "batch_date": batch.batch_date.isoformat(), "nomenclature": batch.nomenclature,
-             "work_center": batch.work_center_id}
+            {
+                "id": batch.id,
+                "batch_number": batch.batch_number,
+                "batch_date": batch.batch_date.isoformat(),
+                "nomenclature": batch.nomenclature,
+                "work_center": batch.work_center_id,
+            },
         )
         await redis_client.delete("dashboard_stats")
 
@@ -40,7 +47,7 @@ class BatchService:
             id=batch.id,
             is_closed=batch.is_closed,
             batch_number=batch.batch_number,
-            batch_date=batch.batch_date
+            batch_date=batch.batch_date,
         )
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
@@ -52,14 +59,14 @@ class BatchService:
         return BatchResponse.model_validate(batch)
 
     async def get_batches(
-            self,
-            is_closed: bool | None = None,
-            batch_number: int | None = None,
-            batch_date: date | None = None, 
-            work_center_id: int | None = None,
-            shift: str | None = None, 
-            offset: int = 0,
-            limit: int = 20
+        self,
+        is_closed: bool | None = None,
+        batch_number: int | None = None,
+        batch_date: date | None = None,
+        work_center_id: int | None = None,
+        shift: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
     ) -> List[BatchResponse]:
         batches = await self.repository.get_with_filter(
             is_closed=is_closed,
@@ -68,7 +75,7 @@ class BatchService:
             work_center_id=work_center_id,
             shift=shift,
             offset=offset,
-            limit=limit
+            limit=limit,
         )
 
         return [BatchResponse.model_validate(batch) for batch in batches]
@@ -80,8 +87,11 @@ class BatchService:
 
         create_webhook_delivery_task.delay(
             "batch_updated",
-            {"id": batch.id, "batch_number": batch.batch_number,
-             "changes": data.model_dump(mode="json", exclude_unset=True)}
+            {
+                "id": batch.id,
+                "batch_number": batch.batch_number,
+                "changes": data.model_dump(mode="json", exclude_unset=True),
+            },
         )
         await redis_client.delete(f"batch_detail:{id}")
         await redis_client.delete(f"batch_statistics:{id}")
@@ -97,8 +107,11 @@ class BatchService:
 
         create_webhook_delivery_task.delay(
             "batch_closed",
-            {"id": batch.id, "batch_number": batch.batch_number,
-             "closed_at": batch.closed_at.isoformat()} ##ДОПИСАТЬ STATISTICS
+            {
+                "id": batch.id,
+                "batch_number": batch.batch_number,
+                "closed_at": batch.closed_at.isoformat(),
+            },  ##ДОПИСАТЬ STATISTICS
         )
 
         return BatchResponse.model_validate(batch)
@@ -109,13 +122,9 @@ class BatchService:
             raise BatchNotFoundException(batch_id)
 
         result = generate_batch_report.delay(batch_id)
-        create_webhook_delivery_task.delay(
-            "batch_report_created",
-            {"id": batch_id}
-        )
+        create_webhook_delivery_task.delay("report_generated", {"id": batch_id})
 
-        return {"task_id": result.id,
-                "status": result.status}
+        return {"task_id": result.id, "status": result.status}
 
 
 class ImportExportService:
@@ -133,8 +142,7 @@ class ImportExportService:
 
         result = import_batches_task.delay(object_name, path)
 
-        return {"id": result.id,
-                "status": result.status}
+        return {"id": result.id, "status": result.status}
 
     async def export_batches(self, filters):
         result = export_batches_task.delay(filters)

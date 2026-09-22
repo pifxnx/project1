@@ -1,4 +1,4 @@
-from ...core.database import Base 
+from ...core.database import Base
 from .batch import Batch
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, Index, ForeignKey
@@ -19,12 +19,17 @@ class Product(Base):
     batch_id: Mapped[int] = mapped_column(ForeignKey("batches.id"))
 
     is_aggregated: Mapped[bool] = mapped_column(default=False, index=True)
-    aggregated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None, nullable=True)
+    aggregated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, nullable=True
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     batch: Mapped["Batch"] = relationship("Batch", back_populates="products")
 
     __table_args__ = (
-            Index("idx_product_batch_aggregated", "batch_id", "is_aggregated"),
+        Index("idx_product_batch_aggregated", "batch_id", "is_aggregated"),
     )
+

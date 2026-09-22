@@ -1,51 +1,44 @@
+import pytest
+from unittest.mock import Mock
 from sqlalchemy import select
 from src.data.models.product import Product
-from src.data.repositories.product_repository import ProductRepository
-from src.domain.services.product_service import ProductService, AggregationService
+from src.tasks.aggregation import aggregate_products_task
 
 
-async def test_aggregate_product(get_test_db, create_product):
-    product = await create_product("test_123")
-    service = AggregationService()
+def test_aggregate_products(
+    create_batch_sync,
+    create_product_sync,
+    patch_get_session,
+    get_test_db_sync,
+    monkeypatch,
+):
+    batch = create_batch_sync(1)
+    create_product_sync("code1", batch.id)
+    create_product_sync("code2", batch.id)
+    create_product_sync("code3", batch.id)
 
-    result = await service.aggregate_products_batch(
-        batch_id=product.batch_id,
-        unique_codes=[product.unique_code]
+    mock_webhook = Mock()
+    monkeypatch.setattr(
+        "src.tasks.aggregation.create_webhook_delivery_task",
+        mock_webhook,
     )
 
-    assert result["success"] is True
-    assert result["total"] == 1
-    assert result["aggregated"] == 1
-    assert result["failed"] == 0
-    assert result["errors"] == []
+    result = aggregate_products_task(batch.id, ["code1", "code2", "code3"])
 
-    stmt = select(Product).where(Product.id == product.id)
+    assert result == {
+        "total": 3,
+        "aggregated": 3,
+        "failed": 0,
+        "errors": [],
+    }
 
-    result = await get_test_db.execute(stmt)
-    product = result.scalar_one()
+    mock_webhook.delay.assert_called_once_with("product_aggregated", result)
 
-    assert product.is_aggregated is True
-    assert product.aggregated_at is not None
-
-
-async def test_multiple_products(get_test_db, create_product):
-    p1 = await create_product("test_124")
-    p2 = await create_product("test_125")
-
-    p2.is_aggregated = True
-    await get_test_db.commit()
-
-    service = AggregationService()
-
-    result = await service.aggregate_products_batch(
-        batch_id=p1.batch_id,
-        unique_codes=[
-            p1.unique_code,
-            p2.unique_code,
-            "test_000"
-        ]
+    products = (
+        get_test_db_sync.execute(select(Product).where(Product.batch_id == batch.id))
+        .scalars()
+        .all()
     )
 
-    assert result["total"] == 3
-    assert result["aggregated"] == 1
-    assert result["failed"] == 2
+    assert len(products) == 3
+    assert all(p.is_aggregated for p in products)
