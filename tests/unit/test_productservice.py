@@ -76,8 +76,8 @@ async def test_product_service_get_by_batch_id():
     repo = AsyncMock()
 
     repo.get_by_batch_id.return_value = [
-        Product(unique_code="code22", batch_id=1, is_aggregated=False),
-        Product(unique_code="code23", batch_id=1, is_aggregated=False),
+        Product(id=1, unique_code="code22", batch_id=1, is_aggregated=False),
+        Product(id=2, unique_code="code23", batch_id=1, is_aggregated=False),
     ]
     service = ProductService(repo)
 

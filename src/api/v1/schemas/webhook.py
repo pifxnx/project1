@@ -14,6 +14,18 @@ class WebhookSubscriptionCreate(WebhookSubscriptionModel):
     timeout: int | None = 10
 
 
+class WebhookSubscriptionCreateResponse(WebhookSubscriptionModel):
+    id: int
+    url: str
+    events: list[str]
+    secret_key: str
+    is_active: bool
+    retry_count: int
+    timeout: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class WebhookSubscriptionResponse(WebhookSubscriptionModel):
     id: int
     url: str
@@ -58,4 +70,3 @@ class WebhookDeliveryResponse(WebhookDeliveryModel):
     error_message: str | None
     created_at: datetime
     delivered_at: datetime | None
-

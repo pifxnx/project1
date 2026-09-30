@@ -3,27 +3,31 @@ from pydantic import BaseModel, ConfigDict
 from typing import List
 from datetime import datetime, date
 
+
 class BatchModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True) 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class BatchCreate(BatchModel):
-    is_closed: bool 
-    task_description: str 
+    is_closed: bool
+    task_description: str
     work_center_id: int
     shift: str
-    team: str 
+    team: str
     ekn_code: str
-    batch_number: int 
+    batch_number: int
     batch_date: date
     nomenclature: str
     shift_start: datetime
     shift_end: datetime
 
+
 class BatchResponse(BatchModel):
     id: int
     is_closed: bool
-    batch_number: int 
-    batch_date: date 
+    batch_number: int
+    batch_date: date
+
 
 class BatchWithProductsResponse(BatchModel):
     id: int
@@ -31,6 +35,7 @@ class BatchWithProductsResponse(BatchModel):
     batch_number: int
     batch_date: date
     products: List[ProductResponse]
+
 
 class BatchAlter(BatchModel):
     is_closed: bool | None = None

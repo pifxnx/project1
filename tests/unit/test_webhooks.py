@@ -7,7 +7,7 @@ from src.api.v1.schemas.webhook import (
     WebhookSubscriptionAlter,
 )
 from src.data.models.webhook import WebhookSubscription
-from src.domain.exceptions.webhook_excpetion import WebhookSubscriptionNotFoundException
+from src.domain.exceptions.webhook_exception import WebhookSubscriptionNotFoundException
 from src.domain.services.webhook_service import WebhookSubscriptionService
 
 
@@ -54,4 +54,3 @@ async def test_subscription_service_delete_not_found():
 
     with pytest.raises(WebhookSubscriptionNotFoundException):
         await service.delete(999)
-

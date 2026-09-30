@@ -4,8 +4,11 @@ from typing import List, Annotated
 from datetime import date
 from ....core.database import get_db
 from ..schemas.batch import (
-    BatchCreate, BatchResponse, 
-    BatchWithProductsResponse, BatchExportFilters)
+    BatchCreate,
+    BatchResponse,
+    BatchWithProductsResponse,
+    BatchExportFilters,
+)
 from ....domain.services.batch_service import BatchService, ImportExportService
 from ....data.repositories.batch_repository import BatchRepository
 from ....data.repositories.product_repository import ProductRepository
@@ -16,16 +19,14 @@ from ....tasks.reports import generate_batch_report
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
+
 @router.get("/{batch_id}", response_model=BatchWithProductsResponse)
 async def get_batch(batch_id: int):
     return await get_batch_with_products(batch_id)
 
 
 @router.post("/", response_model=BatchResponse)
-async def create_batch(
-    data: BatchCreate,
-    session: AsyncSession = Depends(get_db)
-):
+async def create_batch(data: BatchCreate, session: AsyncSession = Depends(get_db)):
     repository = BatchRepository(session)
     service = BatchService(repository)
 
@@ -38,18 +39,18 @@ async def get_batches(
     is_closed: bool | None = None,
     batch_number: int | None = None,
     batch_date: date | None = None,
-    work_center_id: int | None = None, 
+    work_center_id: int | None = None,
     shift: str | None = None,
-    offset: int = Query(0, ge=0), 
+    offset: int = Query(0, ge=0),
     limit: int = Query(20, le=100),
 ):
-    if (batch_number is None and batch_date is None
-        and work_center_id is None and shift is None):
-        return await get_batches_list(
-            is_closed=is_closed,
-            offset=offset,
-            limit=limit
-        )
+    if (
+        batch_number is None
+        and batch_date is None
+        and work_center_id is None
+        and shift is None
+    ):
+        return await get_batches_list(is_closed=is_closed, offset=offset, limit=limit)
     repository = BatchRepository(session)
     service = BatchService(repository)
 
@@ -63,10 +64,10 @@ async def get_batches(
         limit=limit,
     )
 
+
 @router.patch("/{batch_id}", response_model=BatchResponse)
 async def set_is_closed(
-    session: Annotated[AsyncSession, Depends(get_db)], 
-    batch_id: int
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
 ) -> BatchResponse:
     repository = BatchRepository(session)
     service = BatchService(repository)
@@ -75,10 +76,7 @@ async def set_is_closed(
 
 
 @router.post("/{batch_id}/aggregate")
-async def aggregate(
-    batch_id: int,
-    unique_codes: list[str]
-) -> dict:
+async def aggregate(batch_id: int, unique_codes: list[str]) -> dict:
     service = AggregationService()
 
     return await service.aggregate_products_batch(batch_id, unique_codes)
@@ -86,8 +84,7 @@ async def aggregate(
 
 @router.post("/{batch_id}/reports")
 async def create_report(
-    session: Annotated[AsyncSession, Depends(get_db)],
-    batch_id: int
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
 ) -> dict:
     repository = BatchRepository(session)
     service = BatchService(repository)
@@ -110,4 +107,7 @@ async def upload_file(file: UploadFile):
 async def export_batches(filters: BatchExportFilters):
     service = ImportExportService()
 
-    return await service.export_batches(filters.model_dump(exclude_none=True))
+    return await service.export_batches(
+        filters.model_dump(mode="json", exclude_none=True)
+    )
+

@@ -1,5 +1,10 @@
 from openpyxl import load_workbook
 
+
+class ExcelParserException(Exception):
+    pass
+
+
 header_lang_map = {
     "ПредставлениеЗаданияНаСмену": "task_description",
     "РабочийЦентр": "work_center_id",
@@ -12,15 +17,25 @@ header_lang_map = {
     "ДатаВремяНачалаСмены": "shift_start",
 }
 
+
 def parse_batches_excel(filename):
     wb = load_workbook(filename=filename, read_only=True)
-    sheet = wb.active
-    rows = sheet.iter_rows(values_only=True)
-    headers = next(rows)
-    headers = [header_lang_map[h] for h in headers]
+    try:
+        sheet = wb.active
+        rows = sheet.iter_rows(values_only=True)
+        try:
+            headers = next(rows)
+        except StopIteration:
+            raise ExcelParserException("файл пустой")
 
-    for row in rows:
-        yield dict(zip(headers, row))
+        unknown = [h for h in headers if h not in header_lang_map]
+        if unknown:
+            raise ExcelParserException(f"неизвестные заголовки {unknown}")
+        headers = [header_lang_map[h] for h in headers]
 
+        for row in rows:
+            yield dict(zip(headers, row))
 
-    wb.close()
+    finally:
+        wb.close()
+

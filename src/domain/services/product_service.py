@@ -44,8 +44,7 @@ class AggregationService:
         result = aggregate_products_task.delay(batch_id, unique_codes)
 
         await redis_client.delete(f"batch_detail:{batch_id}")
-        await redis_client.delete(f"bash_statistics:{batch_id}")
+        await redis_client.delete(f"batch_statistics:{batch_id}")
         await redis_client.delete("dashboard_stats")
 
         return {"id": result.id, "status": result.status}
-

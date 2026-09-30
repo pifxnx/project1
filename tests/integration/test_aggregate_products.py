@@ -8,7 +8,7 @@ from src.tasks.aggregation import aggregate_products_task
 def test_aggregate_products(
     create_batch_sync,
     create_product_sync,
-    patch_get_session,
+    patch_get_session_aggregation_task,
     get_test_db_sync,
     monkeypatch,
 ):

@@ -1,37 +1,35 @@
 from typing import List
-from ...data.repositories.webhook_repository import(
+from ...data.repositories.webhook_repository import (
     WebhookDeliveryRepository,
-    WebhookSubscriptionRepository
+    WebhookSubscriptionRepository,
 )
-from ...api.v1.schemas.webhook import(
+from ...api.v1.schemas.webhook import (
     WebhookDeliveryResponse,
-    WebhookDeliveryCreate,
     WebhookSubscriptionResponse,
     WebhookSubscriptionCreate,
+    WebhookSubscriptionCreateResponse,
     WebhookSubscriptionListResponse,
-    WebhookSubscriptionAlter
+    WebhookSubscriptionAlter,
 )
-from ...data.models.webhook import(
-    WebhookDelivery,
-    WebhookSubscription
-)
-from ..exceptions.webhook_excpetion import (
+from ...data.models.webhook import WebhookDelivery, WebhookSubscription
+from ..exceptions.webhook_exception import (
     WebhookSubscriptionAlreadyExistsException,
     WebhookSubscriptionNotFoundException,
-    WebhookDeliveryAlreadyExistsException,
-    WebhookDeliveryNotFoundException
+    WebhookDeliveryNotFoundException,
 )
 
 
 class WebhookSubscriptionService:
     def __init__(self, repository: WebhookSubscriptionRepository):
-        self.repository = repository 
+        self.repository = repository
 
-    async def create(self, data: WebhookSubscriptionCreate) -> WebhookSubscriptionResponse:
+    async def create(
+        self, data: WebhookSubscriptionCreate
+    ) -> WebhookSubscriptionCreateResponse:
         hooksub = WebhookSubscription(**data.model_dump())
         hooksub = await self.repository.create(hooksub)
 
-        return WebhookSubscriptionResponse.model_validate(hooksub)
+        return WebhookSubscriptionCreateResponse.model_validate(hooksub)
 
     async def get_by_id(self, sub_id: int) -> WebhookSubscriptionResponse | None:
         hooksub = await self.repository.get_by_id(sub_id)
@@ -43,18 +41,14 @@ class WebhookSubscriptionService:
 
     async def get_all(self) -> WebhookSubscriptionListResponse:
         hooksubs = await self.repository.get_all()
-        items = [WebhookSubscriptionResponse.model_validate(hooksub)
-                 for hooksub in hooksubs]
+        items = [
+            WebhookSubscriptionResponse.model_validate(hooksub) for hooksub in hooksubs
+        ]
 
-        return WebhookSubscriptionListResponse(
-            items=items,
-            total=len(items)
-        )
+        return WebhookSubscriptionListResponse(items=items, total=len(items))
 
     async def alter(
-            self,
-            sub_id: int,
-            data: WebhookSubscriptionAlter
+        self, sub_id: int, data: WebhookSubscriptionAlter
     ) -> WebhookSubscriptionResponse:
         hooksub = await self.repository.alter(sub_id, data)
         if not hooksub:
@@ -67,16 +61,9 @@ class WebhookSubscriptionService:
             raise WebhookSubscriptionNotFoundException(sub_id)
 
 
-
 class WebhookDeliveryService:
     def __init__(self, repository: WebhookDeliveryRepository):
-        self.repository = repository 
-
-    async def create(self, data: WebhookDeliveryCreate) -> WebhookDeliveryResponse:
-        hookdel = WebhookDelivery(**data.model_dump())
-        hookdel = await self.repository.create(hookdel)
-
-        return WebhookDeliveryResponse.model_validate(hookdel)
+        self.repository = repository
 
     async def get_by_id(self, del_id: int) -> WebhookDeliveryResponse | None:
         hookdel = await self.repository.get_by_id(del_id)
@@ -89,5 +76,4 @@ class WebhookDeliveryService:
     async def get_by_sub_id(self, sub_id: int) -> List[WebhookDeliveryResponse]:
         hookdels = await self.repository.get_by_sub_id(sub_id)
 
-        return [WebhookDeliveryResponse.model_validate(hookdel)
-                for hookdel in hookdels]
+        return [WebhookDeliveryResponse.model_validate(hookdel) for hookdel in hookdels]

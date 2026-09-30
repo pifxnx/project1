@@ -1,10 +1,12 @@
 import httpx
+import json
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timezone
 from ..celery_app import celery_app, get_session
 from ..data.models.webhook import WebhookSubscription, WebhookDelivery, Status
+from ..utils.hmac_util import sign_payload
 
 
 def get_subs_by_event(event: str, session: Session) -> List[WebhookSubscription]:
@@ -30,15 +32,22 @@ def create_webhook_delivery(
 def send_webhook_delivery(
     hookdel: WebhookDelivery, subscription: WebhookSubscription, session: Session
 ):
-    print(subscription.url)
+    body_dict = {
+        "event": hookdel.event_type,
+        "data": hookdel.payload,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    body_bytes = json.dumps(body_dict, default=str).encode("utf-8")
+    signature = sign_payload(subscription.secret_key, body_bytes)
+    hookdel.attempts += 1
     try:
         with httpx.Client() as client:
             response = client.post(
                 url=subscription.url,
-                json={
-                    "event": hookdel.event_type,
-                    "data": hookdel.payload,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                content=body_bytes,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Signature": f"sha256={signature}",
                 },
                 timeout=subscription.timeout,
             )
@@ -76,4 +85,3 @@ def create_webhook_delivery_task(event: str, payload: dict):
         for sub in subs:
             hookdel = create_webhook_delivery(sub.id, event, payload, session)
             send_webhook_delivery(hookdel, sub, session)
-

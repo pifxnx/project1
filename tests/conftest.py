@@ -40,6 +40,11 @@ def patch_get_session(monkeypatch, get_test_db_sync):
     monkeypatch.setattr("src.tasks.webhooks.get_session", lambda: get_test_db_sync)
 
 
+@pytest.fixture
+def patch_get_session_aggregation_task(monkeypatch, get_test_db_sync):
+    monkeypatch.setattr("src.tasks.aggregation.get_session", lambda: get_test_db_sync)
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def truncate_tables(get_test_db):
     await get_test_db.execute(

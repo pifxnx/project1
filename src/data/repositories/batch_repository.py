@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from datetime import date
@@ -6,6 +6,7 @@ from typing import List
 from datetime import datetime, timezone
 from ..models.batch import Batch
 from ...api.v1.schemas.batch import BatchAlter
+
 
 class BatchRepository:
     def __init__(self, session: AsyncSession):
@@ -18,25 +19,32 @@ class BatchRepository:
         return batch
 
     async def get_by_id(self, batch_id: int) -> Batch | None:
-        stmt = select(Batch).options(selectinload(Batch.products)).where(Batch.id == batch_id)
+        stmt = (
+            select(Batch)
+            .options(selectinload(Batch.products))
+            .where(Batch.id == batch_id)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_by_number_and_date(self, batch_number: int, batch_date: date) -> Batch | None:
-        stmt = (select(Batch)
-                .where(Batch.batch_number == batch_number, Batch.batch_date == batch_date))
+    async def get_by_number_and_date(
+        self, batch_number: int, batch_date: date
+    ) -> Batch | None:
+        stmt = select(Batch).where(
+            Batch.batch_number == batch_number, Batch.batch_date == batch_date
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_with_filter(
-            self,
-            is_closed: bool | None = None,
-            batch_number: int | None = None,
-            batch_date: date | None = None, 
-            work_center_id: int | None = None,
-            shift: str | None = None, 
-            offset: int = 0,
-            limit: int = 20
+        self,
+        is_closed: bool | None = None,
+        batch_number: int | None = None,
+        batch_date: date | None = None,
+        work_center_id: int | None = None,
+        shift: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
     ) -> List[Batch]:
         stmt = select(Batch).options(selectinload(Batch.products))
         if is_closed is not None:
@@ -55,7 +63,6 @@ class BatchRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-
     async def update(self, id: int, data: BatchAlter) -> Batch | None:
         batch = await self.session.get(Batch, id)
         if batch:
@@ -67,7 +74,6 @@ class BatchRepository:
 
         return batch
 
-
     async def set_is_closed(self, id: int) -> Batch | None:
         batch = await self.session.get(Batch, id)
         if not batch:
@@ -77,10 +83,11 @@ class BatchRepository:
             batch.is_closed = True
             batch.closed_at = datetime.now(timezone.utc)
 
-        else: 
+        else:
             batch.is_closed = False
             batch.closed_at = None
 
         await self.session.commit()
 
         return batch
+

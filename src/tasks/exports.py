@@ -8,7 +8,7 @@ from ..celery_app import celery_app, get_session
 from ..utils.excel_generator import generate_export_batches_excel
 from ..core.storage import minio
 from .webhooks import create_webhook_delivery_task
-
+from ..api.v1.schemas.batch import BatchExportFilters
 
 
 def get_batches_filters(
@@ -38,10 +38,12 @@ def get_batches_filters(
     result = session.execute(stmt)
     return list(result.scalars().unique().all())
 
+
 @celery_app.task
 def export_batches_task(filters: dict):
+    parsed = BatchExportFilters(**filters)
     with get_session() as session:
-        batches = get_batches_filters(session, **filters)
+        batches = get_batches_filters(session, **parsed.model_dump())
 
         rows = [
             {
@@ -54,7 +56,7 @@ def export_batches_task(filters: dict):
                 "nomenclature": b.nomenclature,
                 "ekn_code": b.ekn_code,
                 "total_products": len(b.products),
-                "aggregated_products": sum(1 for p in b.products if p.is_aggregated)
+                "aggregated_products": sum(1 for p in b.products if p.is_aggregated),
             }
             for b in batches
         ]
@@ -69,8 +71,8 @@ def export_batches_task(filters: dict):
             os.remove(path)
 
         create_webhook_delivery_task.delay(
-            "batches_exported",
-            {"file_url": file_url, "total": len(rows)}
+            "batches_exported", {"file_url": file_url, "total": len(rows)}
         )
 
         return {"file_url": file_url, "total": len(rows)}
+

@@ -1,7 +1,10 @@
 import os
 from uuid import uuid4
 from datetime import datetime, date, timezone
+from asyncio import to_thread
 from typing import List
+from sqlalchemy.exc import IntegrityError
+from asyncpg.exceptions import UniqueViolationError, ForeignKeyViolationError
 from ...data.repositories.batch_repository import BatchRepository
 from ...api.v1.schemas.batch import BatchCreate, BatchResponse, BatchAlter
 from ...data.models.batch import Batch
@@ -9,6 +12,7 @@ from ..exceptions.batch_exception import (
     BatchNotFoundException,
     BatchAlreadyExistsException,
 )
+from ..exceptions.work_center_exception import WorkCenterNotFoundException
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...tasks.reports import generate_batch_report
 from ...tasks.imports import import_batches_task
@@ -23,13 +27,15 @@ class BatchService:
 
     async def create(self, data: BatchCreate) -> BatchResponse:
         batch = Batch(**data.model_dump())
-        existing = await self.repository.get_by_number_and_date(
-            batch.batch_number, batch.batch_date
-        )
-        if existing:
-            raise BatchAlreadyExistsException()
 
-        batch = await self.repository.create(batch)
+        try:
+            batch = await self.repository.create(batch)
+        except IntegrityError as e:
+            if isinstance(e.orig.__cause__, UniqueViolationError):
+                raise BatchAlreadyExistsException() from e
+            elif isinstance(e.orig.__cause__, ForeignKeyViolationError):
+                raise WorkCenterNotFoundException(batch.work_center_id) from e
+            raise
 
         create_webhook_delivery_task.delay(
             "batch_created",
@@ -129,6 +135,7 @@ class BatchService:
 
 class ImportExportService:
     async def import_batch(self, data: bytes, filename: str):
+        filename = os.path.basename(filename)
         object_name = f"{uuid4()}_{filename}"
         path = f"/tmp/{object_name}.xlsx"
 
@@ -136,7 +143,7 @@ class ImportExportService:
             f.write(data)
 
         try:
-            minio.upload_file("imports", path, object_name)
+            await to_thread(minio.upload_file, "imports", path, object_name)
         finally:
             os.remove(path)
 
