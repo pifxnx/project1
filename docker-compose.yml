@@ -35,6 +35,16 @@ services:
       retries: 3
     restart: unless-stopped
 
+  webhook_receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_webhook_receiver
+    ports:
+      - "5000:5000"
+    command: python webhook_receiver.py
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: production_control_db

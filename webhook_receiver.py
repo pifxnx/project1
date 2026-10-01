@@ -13,13 +13,13 @@ def set_secret():
     global secret_key
     data = request.json
     secret_key = data.get("key", "")
-    return {"message": "secret key"}"
+    return {"message": "secret key"}
 
 
 @app.post("/webhook")
 def webhook():
     body = request.get_data()
-    signature_header = request.headers.get("X-Signature-sha256")
+    signature_header = request.headers.get("X-Signature")
 
     expected = hmac.new(secret_key.encode(), body, hashlib.sha256).hexdigest()
     received = signature_header.replace("sha256=", "")

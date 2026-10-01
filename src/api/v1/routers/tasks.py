@@ -8,8 +8,12 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 async def get_task_by_id(task_id: str) -> dict:
     result = AsyncResult(task_id)
 
+    task_result = result.result
+    if result.failed():
+        task_result = str(task_result)
+
     return {
         "task_id": task_id,
         "status": result.status,
-        "result": result.result
+        "result": task_result
     }

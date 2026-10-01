@@ -11,6 +11,9 @@ def get_batch_report_data(batch_id: int, session: Session):
     stmt = select(Batch).where(Batch.id == batch_id).options(joinedload(Batch.products))
     batch = session.execute(stmt).unique().scalar_one_or_none()
 
+    if batch is None:
+        raise ValueError(f"Batch {batch_id} not found")
+
     products = [
         {
             "id": p.id,
@@ -32,7 +35,11 @@ def get_batch_report_data(batch_id: int, session: Session):
         "Бригада": batch.team,
         "Номенклатура": batch.nomenclature,
         "Начало смены": batch.shift_start.replace(tzinfo=None).isoformat(),
-        "Окончание смены": batch.shift_end.replace(tzinfo=None).isoformat(),
+        "Окончание смены": (
+            batch.shift_end.replace(tzinfo=None).isoformat()
+            if batch.shift_end is not None
+            else None
+        ),
     }
 
     stats = {

@@ -1,6 +1,7 @@
 import httpx
 import json
-from sqlalchemy import select, update
+import time
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timezone
@@ -39,38 +40,45 @@ def send_webhook_delivery(
     }
     body_bytes = json.dumps(body_dict, default=str).encode("utf-8")
     signature = sign_payload(subscription.secret_key, body_bytes)
-    hookdel.attempts += 1
-    try:
-        with httpx.Client() as client:
-            response = client.post(
-                url=subscription.url,
-                content=body_bytes,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Signature": f"sha256={signature}",
-                },
-                timeout=subscription.timeout,
-            )
-        try:
-            response_body = response.json()
-        except ValueError:
-            response_body = None
 
-        hookdel.response_status = response.status_code
-        hookdel.response_body = response_body
-        hookdel.status = (
-            Status.success if 200 <= response.status_code < 300 else Status.failed
-        )
-        hookdel.error_message = None
+    max_attempts = subscription.retry_count
+    with httpx.Client() as client:
+        for attempt in range(1, max_attempts + 1):
+            hookdel.attempts += 1
+            try:
+                response = client.post(
+                    url=subscription.url,
+                    content=body_bytes,
+                    headers={
+                        "Content-Type": "application/json",
+                        "X-Signature": f"sha256={signature}",
+                    },
+                    timeout=subscription.timeout,
+                )
+                try:
+                    response_body = response.json()
+                except ValueError:
+                    response_body = None
 
-    except httpx.RequestError as e:
-        print("http error")
-        hookdel.status = Status.failed
-        hookdel.error_message = str(e)
-        print(f"http error {e!r}")
+                hookdel.response_status = response.status_code
+                hookdel.response_body = response_body
+                hookdel.error_message = None
 
-    if hookdel.status == Status.success:
-        hookdel.delivered_at = datetime.now(timezone.utc)
+                if 200 <= response.status_code < 300:
+                    hookdel.status = Status.success
+                    hookdel.delivered_at = datetime.now(timezone.utc)
+                    break
+                else:
+                    hookdel.status = Status.failed
+                    if response.status_code < 500:
+                        break
+
+            except httpx.RequestError as e:
+                hookdel.status = Status.failed
+                hookdel.error_message = str(e)
+
+            if attempt < max_attempts:
+                time.sleep(2 ** (attempt - 1))
 
     session.commit()
     session.refresh(hookdel)
