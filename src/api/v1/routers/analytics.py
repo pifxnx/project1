@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.cache import get_dashboard_statistics
@@ -15,9 +15,10 @@ async def get_statistics():
     return await get_dashboard_statistics()
 
 
-@router.get("/compare_batches")
+@router.post("/compare_batches")
 async def compare_batches(
-    batch_ids: list[int], session: Annotated[AsyncSession, Depends(get_db)]
+    session: Annotated[AsyncSession, Depends(get_db)],
+    batch_ids: list[int] = Body(..., embed=True),
 ):
     repository = BatchRepository(session)
     service = AnalyticsService(repository)
