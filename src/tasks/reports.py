@@ -8,9 +8,7 @@ from ..utils.excel_generator import generate_batch_report_excel
 
 
 def get_batch_report_data(batch_id: int, session: Session):
-    stmt = (select(Batch)
-            .where(Batch.id == batch_id)
-            .options(joinedload(Batch.products)))
+    stmt = select(Batch).where(Batch.id == batch_id).options(joinedload(Batch.products))
     batch = session.execute(stmt).unique().scalar_one_or_none()
 
     products = [
@@ -18,7 +16,7 @@ def get_batch_report_data(batch_id: int, session: Session):
             "id": p.id,
             "unique_code": p.unique_code,
             "is_aggregated": p.is_aggregated,
-            "aggregated_at": p.aggregated_at
+            "aggregated_at": p.aggregated_at,
         }
         for p in batch.products
     ]
@@ -27,33 +25,28 @@ def get_batch_report_data(batch_id: int, session: Session):
 
     batch_info = {
         "Номер партии": batch.batch_number,
-        "Дата партии": batch.batch_date,
+        "Дата партии": batch.batch_date.replace(tzinfo=None).isoformat(),
         "Статус": batch.is_closed,
         "Рабочий центр": batch.work_center_id,
         "Смена": batch.shift,
         "Бригада": batch.team,
         "Номенклатура": batch.nomenclature,
-        "Начало смены": batch.shift_start,
-        "Окончание смены": batch.shift_end
+        "Начало смены": batch.shift_start.replace(tzinfo=None).isoformat(),
+        "Окончание смены": batch.shift_end.replace(tzinfo=None).isoformat(),
     }
 
     stats = {
         "Всего продукции": total,
         "Аггрегировано": aggregated,
         "Осталось": total - aggregated,
-        "Процент выполнения": f"{round(aggregated / total * 100, 2)}" if total else 0
+        "Процент выполнения": f"{round(aggregated / total * 100, 2)}" if total else 0,
     }
 
     return batch_info, products, stats
-    
 
 
 @celery_app.task(bind=True, max_retries=3)
-def generate_batch_report(
-    self,
-    batch_id: int,
-    format: str = "excel"
-):
+def generate_batch_report(self, batch_id: int, format: str = "excel"):
     with get_session() as session:
         data = get_batch_report_data(batch_id, session)
 
@@ -72,5 +65,6 @@ def generate_batch_report(
         "success": True,
         "file_url": file_url,
         "file_name": file_name,
-        "file_size": file_size
+        "file_size": file_size,
     }
+
