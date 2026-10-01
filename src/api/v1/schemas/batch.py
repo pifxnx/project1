@@ -39,7 +39,7 @@ class BatchWithProductsResponse(BatchModel):
 
 class BatchAlter(BatchModel):
     is_closed: bool | None = None
-    task_description: bool | None = None
+    task_description: str | None = None
     shift: str | None = None
     team: str | None = None
     ekn_code: str | None = None
@@ -51,7 +51,7 @@ class BatchAlter(BatchModel):
 class BatchExportFilters(BaseModel):
     is_closed: bool | None = None
     batch_number: int | None = None
-    date_from: date | None = None
-    date_to: date | None = None
+    batch_date_from: date | None = None
+    batch_date_to: date | None = None
     work_center_id: int | None = None
     shift: str | None = None
