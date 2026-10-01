@@ -15,6 +15,7 @@ header_lang_map = {
     "Номенклатура": "nomenclature",
     "КодЕКН": "ekn_code",
     "ДатаВремяНачалаСмены": "shift_start",
+    "ДатаВремяОкончанияСмены": "shift_end",
 }
 
 
@@ -38,4 +39,3 @@ def parse_batches_excel(filename):
 
     finally:
         wb.close()
-

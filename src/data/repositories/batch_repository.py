@@ -27,6 +27,15 @@ class BatchRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_ids(self, batch_ids: list[int]) -> List[Batch]:
+        stmt = (
+            select(Batch)
+            .options(selectinload(Batch.products))
+            .where(Batch.id.in_(batch_ids))
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_by_number_and_date(
         self, batch_number: int, batch_date: date
     ) -> Batch | None:
@@ -90,4 +99,3 @@ class BatchRepository:
         await self.session.commit()
 
         return batch
-

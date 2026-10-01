@@ -28,7 +28,7 @@ def get_batch_report_data(batch_id: int, session: Session):
 
     batch_info = {
         "Номер партии": batch.batch_number,
-        "Дата партии": batch.batch_date.replace(tzinfo=None).isoformat(),
+        "Дата партии": batch.batch_date.isoformat(),
         "Статус": batch.is_closed,
         "Рабочий центр": batch.work_center_id,
         "Смена": batch.shift,
@@ -74,4 +74,3 @@ def generate_batch_report(self, batch_id: int, format: str = "excel"):
         "file_name": file_name,
         "file_size": file_size,
     }
-

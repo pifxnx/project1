@@ -30,7 +30,12 @@ class AnalyticsService:
 
         production_stats = calculate_production_stats(batch.products)
 
-        elapsed_hours = (batch.shift_end - batch.shift_start).total_seconds() / 3600
+        if batch.shift_end is not None:
+            elapsed_hours = (batch.shift_end - batch.shift_start).total_seconds() / 3600
+        else:
+            elapsed_hours = (
+                datetime.now(timezone.utc) - batch.shift_start
+            ).total_seconds() / 3600
 
         products_per_hour = (
             round(production_stats["aggregated"] / elapsed_hours, 2)
@@ -61,5 +66,52 @@ class AnalyticsService:
             "team_performance": {
                 "team": batch.team,
                 "avg_products_per_hour": products_per_hour,
+            },
+        }
+
+    async def compare_batches(self, batch_ids: List[int]) -> dict:
+        batches = await self.repository.get_by_ids(batch_ids)
+
+        found = {batch.id for batch in batches}
+        missing = set(batch_ids) - found
+
+        comparison = []
+        for b in batches:
+            stats = calculate_production_stats(b.products)
+
+            end = b.shift_end if b.shift_end else datetime.now(timezone.utc)
+            duration_hours = (end - b.shift_start).total_seconds() / 3600
+            products_per_hour = (
+                round(stats["aggregated"] / duration_hours, 2)
+                if duration_hours > 0
+                else 0
+            )
+
+            comparison.append(
+                {
+                    "batch_id": b.id,
+                    "batch_number": b.batch_number,
+                    "total_products": stats["total_products"],
+                    "aggregated": stats["aggregated"],
+                    "rate": stats["aggregation_rate"],
+                    "duration_hours": duration_hours,
+                    "products_per_hour": products_per_hour,
+                }
+            )
+
+        n = len(comparison)
+        avg_rate = round(sum(c["rate"] for c in comparison) / n, 2) if n > 0 else 0
+        avg_products_per_hour = (
+            round(sum(c["products_per_hour"] for c in comparison) / n, 2)
+            if n > 0
+            else 0
+        )
+
+        return {
+            "comparison": comparison,
+            "summary": {
+                "avg_rate": avg_rate,
+                "avg_products_per_hour": avg_products_per_hour,
+                "not_found": len(missing),
             },
         }
