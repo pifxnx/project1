@@ -15,6 +15,7 @@ from ....data.repositories.product_repository import ProductRepository
 from ....domain.services.product_service import ProductService, AggregationService
 from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
+from ....domain.services.analytics_service import AnalyticsService
 from ....tasks.reports import generate_batch_report
 
 router = APIRouter(prefix="/batches", tags=["batches"])
@@ -82,6 +83,16 @@ async def aggregate(batch_id: int, unique_codes: list[str]) -> dict:
     return await service.aggregate_products_batch(batch_id, unique_codes)
 
 
+@router.get("/{batch_id}/statistics")
+async def get_batch_statistics(
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
+) -> dict:
+    repository = BatchRepository(session)
+    service = AnalyticsService(repository)
+
+    return await service.get_batch_statistics(batch_id)
+
+
 @router.post("/{batch_id}/reports")
 async def create_report(
     session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
@@ -110,4 +121,3 @@ async def export_batches(filters: BatchExportFilters):
     return await service.export_batches(
         filters.model_dump(mode="json", exclude_none=True)
     )
-

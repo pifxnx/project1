@@ -100,7 +100,6 @@ class BatchService:
             },
         )
         await redis_client.delete(f"batch_detail:{id}")
-        await redis_client.delete(f"batch_statistics:{id}")
         await redis_client.delete(f"dashboard_stats")
 
         return BatchResponse.model_validate(batch)
