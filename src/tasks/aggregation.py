@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from ..celery_app import celery_app, get_session
 from .webhooks import create_webhook_delivery_task
 from ..data.models.product import Product
+from ..core.cache import invalidate_batch_sync
 
 
 @celery_app.task
@@ -52,6 +53,8 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
             "failed": len(errors),
             "errors": errors,
         }
+
+        invalidate_batch_sync(batch_id)
 
         create_webhook_delivery_task.delay("product_aggregated", result)
 

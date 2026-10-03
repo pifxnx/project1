@@ -6,7 +6,7 @@ from ..exceptions.product_exception import (
     ProductAlreadyExistsException,
 )
 from ...tasks.aggregation import aggregate_products_task
-from ...core.cache import redis_client
+from ...core.cache import invalidate_batch
 from typing import List
 from sqlalchemy.exc import IntegrityError
 
@@ -21,6 +21,9 @@ class ProductService:
             product = await self.repository.create(product)
         except IntegrityError:
             raise ProductAlreadyExistsException()
+
+        await invalidate_batch(product.batch_id)
+
         return ProductResponse.model_validate(product)
 
     async def get_by_id(self, product_id: int) -> ProductResponse | None:
@@ -42,8 +45,5 @@ class AggregationService:
         self, batch_id: int, unique_codes: list[str]
     ) -> dict:
         result = aggregate_products_task.delay(batch_id, unique_codes)
-
-        await redis_client.delete(f"batch_detail:{batch_id}")
-        await redis_client.delete("dashboard_stats")
 
         return {"id": result.id, "status": result.status}

@@ -1,4 +1,5 @@
 import json
+import redis
 from datetime import datetime, timezone
 from redis.asyncio import Redis
 from sqlalchemy import select, func
@@ -12,6 +13,8 @@ from ..core.config import settings
 
 
 redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
+
+redis_client_sync = redis.Redis.from_url(settings.redis_url, decode_responses=True)
 
 
 async def get_redis() -> Redis:
@@ -28,10 +31,31 @@ def make_key(*args, **kwargs):
     return key
 
 
+def build_key(prefix: str, *args, **kwargs) -> str:
+    key = prefix + ":" + make_key(*args, **kwargs)
+    return key
+
+
+async def invalidate_batch(batch_id: int):
+    await redis_client.delete(
+        build_key("batch_detail", batch_id), build_key("dashboard_stats")
+    )
+    async for k in redis_client.scan_iter("batches_list:*"):
+        await redis_client.delete(k)
+
+
+def invalidate_batch_sync(batch_id: int):
+    redis_client_sync.delete(
+        build_key("batch_detail", batch_id), build_key("dashboard_stats")
+    )
+    for k in redis_client_sync.scan_iter("batches_list:*"):
+        redis_client_sync.delete(k)
+
+
 def cache(ttl: int, key_prefix: str):
     def deco(func):
         async def wrapper(*args, **kwargs):
-            key = key_prefix + ":" + make_key(*args, **kwargs)
+            key = build_key(key_prefix, *args, **kwargs)
 
             r = await get_redis()
 

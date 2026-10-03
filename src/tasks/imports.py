@@ -8,6 +8,7 @@ from .webhooks import create_webhook_delivery_task
 from ..api.v1.schemas.batch import BatchCreate
 from ..utils.excel_parser import ExcelParserException
 from ..data.models.work_center import WorkCenter
+from ..core.cache import invalidate_batch_sync
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -69,6 +70,8 @@ def import_batches_task(object_name: str, path: str):
                         stats["created"] += 1
 
                 session.commit()
+
+                invalidate_batch_sync(0)
             except ExcelParserException as e:
                 stats["error"] = str(e)
 

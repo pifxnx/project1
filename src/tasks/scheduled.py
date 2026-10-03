@@ -1,10 +1,8 @@
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, or_
 from datetime import datetime, timedelta, timezone
 from ..data.models.batch import Batch
 from ..data.models.product import Product
-from ..data.models.webhook import (
-    WebhookDelivery, WebhookSubscription, Status
-)
+from ..data.models.webhook import WebhookDelivery, WebhookSubscription, Status
 from ..celery_app import celery_app, get_session
 from .webhooks import send_webhook_delivery
 from ..core.storage import minio
@@ -13,10 +11,11 @@ from ..core.storage import minio
 @celery_app.task(name="tasks.auto_close_expired_batches")
 def auto_close_expired_batches():
     with get_session() as session:
-        stmt = (update(Batch)
-                .where(Batch.shift_end < func.now(),
-                       Batch.is_closed == False)
-                .values(is_closed = True, closed_at=func.now()))
+        stmt = (
+            update(Batch)
+            .where(Batch.shift_end < func.now(), Batch.is_closed == False)
+            .values(is_closed=True, closed_at=func.now())
+        )
         session.execute(stmt)
         session.commit()
 
@@ -26,9 +25,19 @@ def auto_close_expired_batches():
 @celery_app.task(name="tasks.retry_failed_webhooks")
 def retry_failed_webhook_task():
     with get_session() as session:
-        stmt = (select(WebhookDelivery)
-                .join(WebhookSubscription)
-                .where(WebhookDelivery.status==Status.failed))
+        stmt = (
+            select(WebhookDelivery)
+            .join(WebhookSubscription)
+            .where(
+                WebhookDelivery.status == Status.failed,
+                WebhookDelivery.attempts < WebhookSubscription.retry_count,
+                WebhookSubscription.is_active._is(True),
+                or_(
+                    WebhookDelivery.response_status.is_(None),
+                    WebhookDelivery.response_status >= 500,
+                ),
+            )
+        )
         hookdels = session.execute(stmt).scalars().all()
 
         for hookdel in hookdels:

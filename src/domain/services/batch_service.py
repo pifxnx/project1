@@ -18,7 +18,7 @@ from ...tasks.reports import generate_batch_report
 from ...tasks.imports import import_batches_task
 from ...tasks.exports import export_batches_task
 from ...core.storage import minio
-from ...core.cache import redis_client
+from ...core.cache import invalidate_batch
 
 
 class BatchService:
@@ -47,7 +47,7 @@ class BatchService:
                 "work_center": batch.work_center_id,
             },
         )
-        await redis_client.delete("dashboard_stats")
+        await invalidate_batch(batch.id)
 
         return BatchResponse(
             id=batch.id,
@@ -102,8 +102,7 @@ class BatchService:
                 "changes": data.model_dump(mode="json", exclude_unset=True),
             },
         )
-        await redis_client.delete(f"batch_detail:{id}")
-        await redis_client.delete(f"dashboard_stats")
+        await invalidate_batch(batch.id)
 
         return BatchResponse.model_validate(batch)
 

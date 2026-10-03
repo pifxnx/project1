@@ -12,7 +12,8 @@ from ..utils.hmac_util import sign_payload
 
 def get_subs_by_event(event: str, session: Session) -> List[WebhookSubscription]:
     stmt = select(WebhookSubscription).where(
-        WebhookSubscription.events.contains([event])
+        WebhookSubscription.events.contains([event]),
+        WebhookSubscription.is_active.is_(True),
     )
     result = session.execute(stmt)
 

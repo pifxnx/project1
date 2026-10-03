@@ -1,6 +1,16 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, HttpUrl
 from datetime import datetime
-from typing import List
+from typing import List, Literal
+
+
+event_type = Literal[
+    "batch_created",
+    "batch_updated",
+    "batch_closed",
+    "product_aggregated",
+    "report_generated",
+    "import_completed",
+]
 
 
 class WebhookSubscriptionModel(BaseModel):
@@ -8,7 +18,8 @@ class WebhookSubscriptionModel(BaseModel):
 
 
 class WebhookSubscriptionCreate(WebhookSubscriptionModel):
-    events: list[str]
+    url: HttpUrl
+    events: List[event_type]
     # secret_key: str
     retry_count: int | None = 3
     timeout: int | None = 10
@@ -16,8 +27,8 @@ class WebhookSubscriptionCreate(WebhookSubscriptionModel):
 
 class WebhookSubscriptionCreateResponse(WebhookSubscriptionModel):
     id: int
-    url: str
-    events: list[str]
+    url: HttpUrl
+    events: List[event_type]
     secret_key: str
     is_active: bool
     retry_count: int
@@ -28,8 +39,8 @@ class WebhookSubscriptionCreateResponse(WebhookSubscriptionModel):
 
 class WebhookSubscriptionResponse(WebhookSubscriptionModel):
     id: int
-    url: str
-    events: list[str]
+    url: HttpUrl
+    events: List[event_type]
     is_active: bool
     retry_count: int
     timeout: int
@@ -43,8 +54,8 @@ class WebhookSubscriptionListResponse(WebhookSubscriptionModel):
 
 
 class WebhookSubscriptionAlter(WebhookSubscriptionModel):
-    url: str | None = None
-    events: list[str] | None = None
+    url: HttpUrl | None = None
+    events: List[event_type] | None = None
     is_active: bool | None = None
     retry_count: int | None = None
     timeout: int | None = None

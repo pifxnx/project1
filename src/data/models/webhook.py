@@ -39,7 +39,9 @@ class WebhookDelivery(Base):
     __tablename__ = "webhook_deliveries"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    subscription_id: Mapped[int] = mapped_column(ForeignKey("webhook_subscriptions.id"))
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("webhook_subscriptions.id", ondelete="CASCADE")
+    )
     event_type: Mapped[str]
     payload: Mapped[dict] = mapped_column(JSON)
 
