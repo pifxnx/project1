@@ -87,9 +87,12 @@ class BatchService:
         return [BatchResponse.model_validate(batch) for batch in batches]
 
     async def update(self, id: int, data: BatchAlter) -> BatchResponse:
-        batch = await self.repository.update(id, data)
+        batch, closed_now = await self.repository.update(id, data)
         if not batch:
             raise BatchNotFoundException(id)
+
+        if closed_now:
+            create_webhook_delivery_task.delay("batch_closed", {"id": batch.id})
 
         create_webhook_delivery_task.delay(
             "batch_updated",
@@ -101,23 +104,6 @@ class BatchService:
         )
         await redis_client.delete(f"batch_detail:{id}")
         await redis_client.delete(f"dashboard_stats")
-
-        return BatchResponse.model_validate(batch)
-
-    async def set_is_closed(self, id: int) -> BatchResponse:
-        batch = await self.repository.set_is_closed(id)
-
-        if not batch:
-            raise BatchNotFoundException(id)
-
-        create_webhook_delivery_task.delay(
-            "batch_closed",
-            {
-                "id": batch.id,
-                "batch_number": batch.batch_number,
-                "closed_at": batch.closed_at.isoformat(),
-            },  ##ДОПИСАТЬ STATISTICS
-        )
 
         return BatchResponse.model_validate(batch)
 
@@ -136,7 +122,7 @@ class ImportExportService:
     async def import_batch(self, data: bytes, filename: str):
         filename = os.path.basename(filename)
         object_name = f"{uuid4()}_{filename}"
-        path = f"/tmp/{object_name}.xlsx"
+        path = f"/tmp/{object_name}"
 
         with open(path, "wb") as f:
             f.write(data)

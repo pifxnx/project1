@@ -1,4 +1,5 @@
 import os
+from uuid import uuid4
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from ..data.models.batch import Batch
@@ -19,7 +20,9 @@ def get_batch_report_data(batch_id: int, session: Session):
             "id": p.id,
             "unique_code": p.unique_code,
             "is_aggregated": p.is_aggregated,
-            "aggregated_at": p.aggregated_at,
+            "aggregated_at": (
+                p.aggregated_at.replace(tzinfo=None) if p.aggregated_at else None
+            ),
         }
         for p in batch.products
     ]
@@ -34,11 +37,9 @@ def get_batch_report_data(batch_id: int, session: Session):
         "Смена": batch.shift,
         "Бригада": batch.team,
         "Номенклатура": batch.nomenclature,
-        "Начало смены": batch.shift_start.replace(tzinfo=None).isoformat(),
+        "Начало смены": batch.shift_start.replace(tzinfo=None),
         "Окончание смены": (
-            batch.shift_end.replace(tzinfo=None).isoformat()
-            if batch.shift_end is not None
-            else None
+            batch.shift_end.replace(tzinfo=None) if batch.shift_end else None
         ),
     }
 
@@ -58,7 +59,7 @@ def generate_batch_report(self, batch_id: int, format: str = "excel"):
         data = get_batch_report_data(batch_id, session)
 
     batch_info, products, stats = data
-    file_name = f"batch_{batch_info['Номер партии']}_report.xlsx"
+    file_name = f"batch_{batch_info['Номер партии']}_{uuid4().hex}_report.xlsx"
     file_path = f"/tmp/{file_name}"
     try:
         generate_batch_report_excel(batch_info, products, stats, file_path)

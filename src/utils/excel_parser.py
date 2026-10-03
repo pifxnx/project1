@@ -7,7 +7,9 @@ class ExcelParserException(Exception):
 
 header_lang_map = {
     "ПредставлениеЗаданияНаСмену": "task_description",
-    "РабочийЦентр": "work_center_id",
+    "РабочийЦентр": "work_center_name",
+    "ИдентификаторРЦ": "work_center_identifier",
+    "СтатусЗакрытия": "is_closed",
     "Смена": "shift",
     "Бригада": "team",
     "НомерПартии": "batch_number",

@@ -6,6 +6,7 @@ from ....core.database import get_db
 from ..schemas.batch import (
     BatchCreate,
     BatchResponse,
+    BatchAlter,
     BatchWithProductsResponse,
     BatchExportFilters,
 )
@@ -17,13 +18,18 @@ from ....tasks.aggregation import aggregate_products_task
 from ....core.cache import get_batch_with_products, get_batches_list
 from ....domain.services.analytics_service import AnalyticsService
 from ....tasks.reports import generate_batch_report
+from ....domain.exceptions.batch_exception import BatchNotFoundException
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
 
 @router.get("/{batch_id}", response_model=BatchWithProductsResponse)
 async def get_batch(batch_id: int):
-    return await get_batch_with_products(batch_id)
+    batch = await get_batch_with_products(batch_id)
+    if batch is None:
+        raise BatchNotFoundException(batch_id)
+
+    return batch
 
 
 @router.post("/", response_model=BatchResponse)
@@ -67,13 +73,13 @@ async def get_batches(
 
 
 @router.patch("/{batch_id}", response_model=BatchResponse)
-async def set_is_closed(
-    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
-) -> BatchResponse:
+async def update_batch(
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int, data: BatchAlter
+):
     repository = BatchRepository(session)
     service = BatchService(repository)
 
-    return await service.set_is_closed(batch_id)
+    return await service.update(batch_id, data)
 
 
 @router.post("/{batch_id}/aggregate")

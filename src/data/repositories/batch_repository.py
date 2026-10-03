@@ -72,30 +72,24 @@ class BatchRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def update(self, id: int, data: BatchAlter) -> Batch | None:
+    async def update(self, id: int, data: BatchAlter) -> tuple[Batch | None, bool]:
         batch = await self.session.get(Batch, id)
+        closed_now = False
         if batch:
-            for field, value in data.model_dump(exclude_unset=True).items():
+            before = batch.is_closed
+            changes = data.model_dump(exclude_unset=True)
+            if changes.get("is_closed", True) is None:
+                changes.pop("is_closed")
+            if "is_closed" in changes and changes["is_closed"] != batch.is_closed:
+                batch.closed_at = (
+                    datetime.now(timezone.utc) if changes["is_closed"] else None
+                )
+
+            for field, value in changes.items():
                 setattr(batch, field, value)
 
             await self.session.commit()
             await self.session.refresh(batch)
+            closed_now = not before and batch.is_closed
 
-        return batch
-
-    async def set_is_closed(self, id: int) -> Batch | None:
-        batch = await self.session.get(Batch, id)
-        if not batch:
-            return None
-
-        if not batch.is_closed:
-            batch.is_closed = True
-            batch.closed_at = datetime.now(timezone.utc)
-
-        else:
-            batch.is_closed = False
-            batch.closed_at = None
-
-        await self.session.commit()
-
-        return batch
+        return batch, closed_now

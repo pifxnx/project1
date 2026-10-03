@@ -9,7 +9,7 @@ class BatchModel(BaseModel):
 
 
 class BatchCreate(BatchModel):
-    is_closed: bool
+    is_closed: bool = False
     task_description: str
     work_center_id: int
     shift: str

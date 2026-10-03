@@ -40,9 +40,8 @@ def cache(ttl: int, key_prefix: str):
                 return json.loads(cached)
 
             result = await func(*args, **kwargs)
-            data = json.dumps(result, default=str)
-
-            await r.set(key, data, ex=ttl)
+            if result is not None:
+                await r.set(key, json.dumps(result, default=str), ex=ttl)
 
             return result
 
@@ -122,4 +121,3 @@ async def get_batch_with_products(batch_id: int):
         batch = BatchWithProductsResponse.model_validate(batch)
 
         return batch.model_dump(mode="json")
-
