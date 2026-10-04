@@ -6,8 +6,19 @@ from ..data.models.product import Product
 from ..core.cache import invalidate_batch_sync
 
 
-@celery_app.task
-def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
+CHUNK_SIZE = 20
+
+
+def publish_progress(task, current: int, total: int, aggregated: int) -> None:
+    if task.request.id:
+        task.update_state(
+            state="PROGRESS",
+            meta={"current": current, "total": total, "aggregated": aggregated},
+        )
+
+
+@celery_app.task(bind=True)
+def aggregate_products_task(self, batch_id: int, unique_codes: list[str]) -> dict:
     with get_session() as session:
         stmt = select(Product).where(
             Product.batch_id == batch_id, Product.unique_code.in_(unique_codes)
@@ -31,13 +42,18 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
         for code in requested_codes - found_codes:
             errors.append({"code": code, "reason": "product not found"})
 
+        total = len(unique_codes)
+        processed = len(errors)
         aggregated = 0
-        if codes_to_aggregate:
+        publish_progress(self, processed, total, aggregated)
+
+        for i in range(0, len(codes_to_aggregate), CHUNK_SIZE):
+            chunk = codes_to_aggregate[i : i + CHUNK_SIZE]
             stmt = (
                 update(Product)
                 .where(
                     Product.batch_id == batch_id,
-                    Product.unique_code.in_(codes_to_aggregate),
+                    Product.unique_code.in_(chunk),
                     Product.is_aggregated.is_(False),
                 )
                 .values(is_aggregated=True, aggregated_at=datetime.now(timezone.utc))
@@ -45,7 +61,9 @@ def aggregate_products_task(batch_id: int, unique_codes: list[str]) -> dict:
             )
             result = session.execute(stmt)
             session.commit()
-            aggregated = len(result.scalars().all())
+            aggregated += len(result.scalars().all())
+            processed += len(chunk)
+            publish_progress(self, processed, total, aggregated)
 
         result = {
             "total": len(unique_codes),

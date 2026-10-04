@@ -6,6 +6,7 @@ from ..exceptions.product_exception import (
     ProductAlreadyExistsException,
 )
 from ...tasks.aggregation import aggregate_products_task
+from ...tasks.webhooks import create_webhook_delivery_task
 from ...core.cache import invalidate_batch
 from typing import List
 from sqlalchemy.exc import IntegrityError
@@ -41,9 +42,51 @@ class ProductService:
 
 
 class AggregationService:
+    def __init__(self, repository: ProductRepository | None = None):
+        self.repository = repository
+
     async def aggregate_products_batch(
         self, batch_id: int, unique_codes: list[str]
     ) -> dict:
-        result = aggregate_products_task.delay(batch_id, unique_codes)
+        unique_codes = list(dict.fromkeys(unique_codes))
+        products = await self.repository.get_by_batch_id_and_unique_codes(
+            batch_id, unique_codes
+        )
 
-        return {"id": result.id, "status": result.status}
+        found = {p.unique_code for p in products}
+        errors = [
+            {"code": p.unique_code, "reason": "already aggregated"}
+            for p in products
+            if p.is_aggregated
+        ]
+        errors += [
+            {"code": code, "reason": "product not found"}
+            for code in unique_codes
+            if code not in found
+        ]
+        to_aggregate = [p.unique_code for p in products if not p.is_aggregated]
+
+        aggregated = 0
+        if to_aggregate:
+            aggregated = await self.repository.aggregate_products(
+                batch_id, to_aggregate
+            )
+
+        result = {
+            "total": len(unique_codes),
+            "aggregated": aggregated,
+            "failed": len(errors),
+            "errors": errors,
+        }
+
+        await invalidate_batch(batch_id)
+        create_webhook_delivery_task.delay("product_aggregated", result)
+
+        return result
+
+    async def aggregate_products_batch_async(
+        self, batch_id: int, unique_codes: list[str]
+    ) -> dict:
+        task = aggregate_products_task.delay(batch_id, unique_codes)
+
+        return {"task_id": task.id}

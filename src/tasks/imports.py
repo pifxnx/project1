@@ -35,7 +35,9 @@ def import_batches_task(object_name: str, path: str):
                     stats["total_rows"] += 1
                     try:
                         work_center_identifier = row.pop("work_center_identifier", None)
-                        row.pop("work_center_name", None)
+                        work_center_name = row.pop("work_center_name", None)
+                        if not work_center_identifier:
+                            raise ValueError("work center identifier is empty")
 
                         work_center_id = session.execute(
                             select(WorkCenter.id).where(
@@ -43,7 +45,13 @@ def import_batches_task(object_name: str, path: str):
                             )
                         ).scalar_one_or_none()
                         if work_center_id is None:
-                            raise ValueError("work center not found")
+                            work_center = WorkCenter(
+                                identifier=work_center_identifier,
+                                name=work_center_name or str(work_center_identifier),
+                            )
+                            session.add(work_center)
+                            session.flush()
+                            work_center_id = work_center.id
 
                         row["work_center_id"] = work_center_id
                         with session.begin_nested():

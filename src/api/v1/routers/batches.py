@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, Query, UploadFile, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated
 from datetime import date
 from ....core.database import get_db
 from ..schemas.batch import (
-    BatchCreate,
+    BatchCreateRu,
     BatchResponse,
     BatchAlter,
     BatchWithProductsResponse,
     BatchExportFilters,
+    BatchExportRequest,
 )
 from ....domain.services.batch_service import BatchService, ImportExportService
 from ....data.repositories.batch_repository import BatchRepository
@@ -32,12 +33,16 @@ async def get_batch(batch_id: int):
     return batch
 
 
-@router.post("/", response_model=BatchResponse)
-async def create_batch(data: BatchCreate, session: AsyncSession = Depends(get_db)):
+@router.post(
+    "/", response_model=List[BatchResponse], status_code=status.HTTP_201_CREATED
+)
+async def create_batches(
+    data: List[BatchCreateRu], session: AsyncSession = Depends(get_db)
+):
     repository = BatchRepository(session)
     service = BatchService(repository)
 
-    return await service.create(data)
+    return await service.create_many(data)
 
 
 @router.get("/", response_model=List[BatchResponse])
@@ -82,11 +87,22 @@ async def update_batch(
     return await service.update(batch_id, data)
 
 
-@router.post("/{batch_id}/aggregate")
-async def aggregate(batch_id: int, unique_codes: list[str]) -> dict:
-    service = AggregationService()
+@router.post("/{batch_id}/aggregate", status_code=status.HTTP_200_OK)
+async def aggregate(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    batch_id: int,
+    unique_codes: list[str],
+) -> dict:
+    service = AggregationService(ProductRepository(session))
 
     return await service.aggregate_products_batch(batch_id, unique_codes)
+
+
+@router.post("/{batch_id}/aggregate-async", status_code=status.HTTP_202_ACCEPTED)
+async def aggregate_async(batch_id: int, unique_codes: list[str]) -> dict:
+    service = AggregationService()
+
+    return await service.aggregate_products_batch_async(batch_id, unique_codes)
 
 
 @router.get("/{batch_id}/statistics")
@@ -99,9 +115,9 @@ async def get_batch_statistics(
     return await service.get_batch_statistics(batch_id)
 
 
-@router.post("/{batch_id}/reports")
+@router.post("/{batch_id}/reports", status_code=status.HTTP_202_ACCEPTED)
 async def create_report(
-    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id
 ) -> dict:
     repository = BatchRepository(session)
     service = BatchService(repository)
@@ -109,7 +125,7 @@ async def create_report(
     return await service.create_batch_report(batch_id)
 
 
-@router.post("/import")
+@router.post("/import", status_code=status.HTTP_202_ACCEPTED)
 async def upload_file(file: UploadFile):
     content = await file.read()
 
@@ -120,10 +136,8 @@ async def upload_file(file: UploadFile):
     return await service.import_batch(content, file.filename)
 
 
-@router.post("/export")
-async def export_batches(filters: BatchExportFilters):
+@router.post("/export", status_code=status.HTTP_202_ACCEPTED)
+async def export_batches(data: BatchExportRequest):
     service = ImportExportService()
 
-    return await service.export_batches(
-        filters.model_dump(mode="json", exclude_none=True)
-    )
+    return await service.export_batches(data.model_dump(mode="json", exclude_none=True))

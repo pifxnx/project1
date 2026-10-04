@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, List
 from ....core.database import get_db
@@ -26,11 +26,10 @@ async def get_product_by_batch_id(
     return await service.get_by_batch_id(batch_id)
 
 
-@router.post("/", response_model=ProductResponse)
+@router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
     data: ProductCreate, session: Annotated[AsyncSession, Depends(get_db)]
 ):
     repository = ProductRepository(session)
     service = ProductService(repository)
     return await service.create(data)
-

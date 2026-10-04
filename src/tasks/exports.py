@@ -6,6 +6,7 @@ from datetime import date
 from ..data.models.batch import Batch
 from ..celery_app import celery_app, get_session
 from ..utils.excel_generator import generate_export_batches_excel
+from ..utils.csv_generator import generate_export_batches_csv
 from ..core.storage import minio
 from .webhooks import create_webhook_delivery_task
 from ..api.v1.schemas.batch import BatchExportFilters
@@ -40,7 +41,7 @@ def get_batches_filters(
 
 
 @celery_app.task
-def export_batches_task(filters: dict):
+def export_batches_task(filters: dict, format: str = "excel"):
     parsed = BatchExportFilters(**filters)
     with get_session() as session:
         batches = get_batches_filters(session, **parsed.model_dump())
@@ -61,11 +62,16 @@ def export_batches_task(filters: dict):
             for b in batches
         ]
 
-        object_name = f"{uuid4()}_batch_export.xlsx"
-        path = f"/tmp/{uuid4()}.xlsx"
+        ext, generator = (
+            ("csv", generate_export_batches_csv)
+            if format == "csv"
+            else ("xlsx", generate_export_batches_excel)
+        )
+        object_name = f"{uuid4()}_batch_export.{ext}"
+        path = f"/tmp/{uuid4()}.{ext}"
 
         try:
-            generate_export_batches_excel(rows, path)
+            generator(rows, path)
             file_url = minio.upload_file("exports", path, object_name)
         finally:
             os.remove(path)

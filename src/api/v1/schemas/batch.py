@@ -1,11 +1,28 @@
 from .product import ProductResponse
-from pydantic import BaseModel, ConfigDict
-from typing import List
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Literal
 from datetime import datetime, date
 
 
 class BatchModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+
+class BatchCreateRu(BatchModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    is_closed: bool = Field(False, alias="СтатусЗакрытия")
+    task_description: str = Field(alias="ПредставлениеЗаданияНаСмену")
+    work_center_name: str = Field(alias="РабочийЦентр")
+    work_center_identifier: str = Field(alias="ИдентификаторРЦ")
+    shift: str = Field(alias="Смена")
+    team: str = Field(alias="Бригада")
+    ekn_code: str = Field(alias="КодЕКН")
+    batch_number: int = Field(alias="НомерПартии")
+    batch_date: date = Field(alias="ДатаПартии")
+    nomenclature: str = Field(alias="Номенклатура")
+    shift_start: datetime = Field(alias="ДатаВремяНачалаСмены")
+    shift_end: datetime = Field(alias="ДатаВремяОкончанияСмены")
 
 
 class BatchCreate(BatchModel):
@@ -55,3 +72,10 @@ class BatchExportFilters(BaseModel):
     batch_date_to: date | None = None
     work_center_id: int | None = None
     shift: str | None = None
+
+
+class BatchExportRequest(BaseModel):
+    format: Literal["csv", "excel"]
+    filters: BatchExportFilters
+
+    model_config = ConfigDict(extra="forbid")

@@ -29,25 +29,30 @@ def generate_batch_report_excel(batch: dict, products: list[dict],
     wb.save(file_path)
 
 
+EXPORT_HEADERS = [
+    "Номер партии", "Дата партии", "Статус", "Рабочий центр",
+    "Смена", "Бригада", "Номенклатура", "Код ЕКН",
+    "Всего продукции", "Аггрегировано"
+]
+
+
+def export_row(b: dict) -> list:
+    return [
+        b["batch_number"], b["batch_date"],
+        "Закрыта" if b["is_closed"] else "Открыта",
+        b["work_center_id"], b["shift"], b["team"],
+        b["nomenclature"], b["ekn_code"],
+        b["total_products"], b["aggregated_products"],
+    ]
+
+
 def generate_export_batches_excel(batches: list[dict], file_path: str):
     wb = Workbook()
     ws = wb.active
     ws.title = "Партии"
-
-    headers = [
-        "Номер партии", "Дата партии", "Статус", "Рабочий центр",
-        "Смена", "Бригада", "Номенклатура", "Код ЕКН",
-        "Всего продукции", "Аггрегировано"
-    ]
-    ws.append(headers)
+    ws.append(EXPORT_HEADERS)
 
     for b in batches:
-        ws.append([
-            b["batch_number"], b["batch_date"],
-            "Закрыта" if b["is_closed"] else "Открыта",
-            b["work_center_id"], b["shift"], b["team"],
-            b["nomenclature"], b["ekn_code"],
-            b["total_products"], b["aggregated_products"],
-        ])
+        ws.append(export_row(b))
 
     wb.save(file_path)

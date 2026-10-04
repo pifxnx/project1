@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, List
 from ....core.database import get_db
@@ -22,7 +22,11 @@ from ..schemas.webhook import (
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 
-@router.post("/", response_model=WebhookSubscriptionCreateResponse)
+@router.post(
+    "/",
+    response_model=WebhookSubscriptionCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_webhook_subscription(
     hooksub: WebhookSubscriptionCreate,
     session: Annotated[AsyncSession, Depends(get_db)],

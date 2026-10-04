@@ -5,12 +5,28 @@ from datetime import date
 from typing import List
 from datetime import datetime, timezone
 from ..models.batch import Batch
+from ..models.work_center import WorkCenter
 from ...api.v1.schemas.batch import BatchAlter
 
 
 class BatchRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def get_or_create_work_center(
+        self, identifier: str, name: str
+    ) -> WorkCenter:
+        stmt = select(WorkCenter).where(WorkCenter.identifier == identifier)
+        result = await self.session.execute(stmt)
+        work_center = result.scalar_one_or_none()
+
+        if not work_center:
+            work_center = WorkCenter(identifier=identifier, name=name)
+            self.session.add(work_center)
+            await self.session.commit()
+            await self.session.refresh(work_center)
+
+        return work_center
 
     async def create(self, batch: Batch) -> Batch:
         self.session.add(batch)

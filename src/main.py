@@ -19,9 +19,9 @@ async def healthcheck():
     return {"status": "OK"}
 
 
-app.include_router(batches.router)
-app.include_router(products.router)
-app.include_router(webhooks.router)
-app.include_router(work_centers.router)
-app.include_router(analytics.router)
-app.include_router(tasks.router)
+app.include_router(batches.router, prefix="/api/v1")
+app.include_router(products.router, prefix="/api/v1")
+app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(work_centers.router, prefix="/api/v1")
+app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(tasks.router, prefix="/api/v1")

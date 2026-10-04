@@ -31,7 +31,7 @@ def retry_failed_webhook_task():
             .where(
                 WebhookDelivery.status == Status.failed,
                 WebhookDelivery.attempts < WebhookSubscription.retry_count,
-                WebhookSubscription.is_active._is(True),
+                WebhookSubscription.is_active.is_(True),
                 or_(
                     WebhookDelivery.response_status.is_(None),
                     WebhookDelivery.response_status >= 500,

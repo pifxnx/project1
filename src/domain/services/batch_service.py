@@ -6,7 +6,12 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 from asyncpg.exceptions import UniqueViolationError, ForeignKeyViolationError
 from ...data.repositories.batch_repository import BatchRepository
-from ...api.v1.schemas.batch import BatchCreate, BatchResponse, BatchAlter
+from ...api.v1.schemas.batch import (
+    BatchCreate,
+    BatchCreateRu,
+    BatchResponse,
+    BatchAlter,
+)
 from ...data.models.batch import Batch
 from ..exceptions.batch_exception import (
     BatchNotFoundException,
@@ -55,6 +60,22 @@ class BatchService:
             batch_number=batch.batch_number,
             batch_date=batch.batch_date,
         )
+
+    async def create_many(self, batches: List[BatchCreateRu]) -> List[BatchResponse]:
+        results = []
+        for batch in batches:
+            work_center = await self.repository.get_or_create_work_center(
+                batch.work_center_identifier, batch.work_center_name
+            )
+            data = BatchCreate(
+                **batch.model_dump(
+                    exclude={"work_center_identifier", "work_center_name"}
+                ),
+                work_center_id=work_center.id,
+            )
+            results.append(await self.create(data))
+
+        return results
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
         batch = await self.repository.get_by_id(batch_id)
@@ -135,7 +156,7 @@ class ImportExportService:
 
         return {"id": result.id, "status": result.status}
 
-    async def export_batches(self, filters):
-        result = export_batches_task.delay(filters)
+    async def export_batches(self, data: dict):
+        result = export_batches_task.delay(data["filters"], data["format"])
 
         return {"id": result.id, "status": result.status}
