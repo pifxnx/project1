@@ -2,7 +2,7 @@ import os
 from uuid import uuid4
 from datetime import datetime, date, timezone
 from asyncio import to_thread
-from typing import List
+from typing import List, Literal
 from sqlalchemy.exc import IntegrityError
 from asyncpg.exceptions import UniqueViolationError, ForeignKeyViolationError
 from ...data.repositories.batch_repository import BatchRepository
@@ -127,12 +127,14 @@ class BatchService:
 
         return BatchResponse.model_validate(batch)
 
-    async def create_batch_report(self, batch_id: int):
+    async def create_batch_report(
+        self, batch_id: int, format: Literal["excel", "pdf"] = "excel"
+    ):
         batch = await self.repository.get_by_id(batch_id)
         if not batch:
             raise BatchNotFoundException(batch_id)
 
-        result = generate_batch_report.delay(batch_id)
+        result = generate_batch_report.delay(batch_id, format)
         create_webhook_delivery_task.delay("report_generated", {"id": batch_id})
 
         return {"task_id": result.id, "status": result.status}

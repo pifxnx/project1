@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, UploadFile, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Annotated
+from typing import List, Annotated, Literal
 from datetime import date
 from ....core.database import get_db
 from ..schemas.batch import (
@@ -117,12 +117,14 @@ async def get_batch_statistics(
 
 @router.post("/{batch_id}/reports", status_code=status.HTTP_202_ACCEPTED)
 async def create_report(
-    session: Annotated[AsyncSession, Depends(get_db)], batch_id
+    session: Annotated[AsyncSession, Depends(get_db)],
+    batch_id: int,
+    format: Literal["excel", "pdf"] = "excel",
 ) -> dict:
     repository = BatchRepository(session)
     service = BatchService(repository)
 
-    return await service.create_batch_report(batch_id)
+    return await service.create_batch_report(batch_id, format)
 
 
 @router.post("/import", status_code=status.HTTP_202_ACCEPTED)
