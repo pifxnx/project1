@@ -27,23 +27,23 @@ class WebhookSubscriptionRepository:
         return list(result.scalars().all())
 
     async def get_by_event(self, event: str) -> List[WebhookSubscription]:
-        stmt = (select(WebhookSubscription)
-                .where(WebhookSubscription.events.contains([event]),
-                       WebhookSubscription.is_active == True))
+        stmt = select(WebhookSubscription).where(
+            WebhookSubscription.events.contains([event]),
+            WebhookSubscription.is_active == True,
+        )
 
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
 
-
     async def alter(
-            self,
-            sub_id: int,
-            data: WebhookSubscriptionAlter
+        self, sub_id: int, data: WebhookSubscriptionAlter
     ) -> WebhookSubscription | None:
         hooksub = await self.session.get(WebhookSubscription, sub_id)
         if hooksub:
-            for field, value in data.model_dump(exclude_unset=True).items():
+            for field, value in data.model_dump(
+                exclude_unset=True, mode="json"
+            ).items():
                 if value is not None:
                     setattr(hooksub, field, value)
 
@@ -63,7 +63,6 @@ class WebhookSubscriptionRepository:
         return False
 
 
-
 class WebhookDeliveryRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -80,19 +79,18 @@ class WebhookDeliveryRepository:
         return hookdelivery
 
     async def get_by_sub_id(self, sub_id: int) -> List[WebhookDelivery]:
-        stmt = (select(WebhookDelivery)
-                    .where(WebhookDelivery.subscription_id == sub_id))
+        stmt = select(WebhookDelivery).where(WebhookDelivery.subscription_id == sub_id)
         result = await self.session.execute(stmt)
 
         return list(result.scalars().all())
 
     async def update(
-            self,
-            delivery_id: int,
-            status: Status,
-            response_status: int | None = None,
-            response_body: dict | None = None,
-            error_message: str | None = None
+        self,
+        delivery_id: int,
+        status: Status,
+        response_status: int | None = None,
+        response_body: dict | None = None,
+        error_message: str | None = None,
     ) -> WebhookDelivery | None:
         delivery = await self.session.get(WebhookDelivery, delivery_id)
 
@@ -106,3 +104,4 @@ class WebhookDeliveryRepository:
             await self.session.refresh(delivery)
 
         return delivery
+

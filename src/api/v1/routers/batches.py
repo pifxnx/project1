@@ -54,7 +54,7 @@ async def get_batches(
     work_center_id: int | None = None,
     shift: str | None = None,
     offset: int = Query(0, ge=0),
-    limit: int = Query(20, le=100),
+    limit: int = Query(20, ge=1, le=100),
 ):
     if (
         batch_number is None

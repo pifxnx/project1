@@ -1,11 +1,19 @@
 from .product import ProductResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import List, Literal
 from datetime import datetime, date
 
 
 class BatchModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="after")
+    def check_shift_range(self):
+        start = getattr(self, "shift_start", None)
+        end = getattr(self, "shift_end", None)
+        if start is not None and end is not None and end <= start:
+            raise ValueError("shift_end must be greater than shift_start")
+        return self
 
 
 class BatchCreateRu(BatchModel):

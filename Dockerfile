@@ -14,6 +14,7 @@ RUN poetry config virtualenvs.create false \
 COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+COPY scripts ./scripts
 COPY webhook_receiver.py ./webhook_receiver.py
 
 EXPOSE 8000

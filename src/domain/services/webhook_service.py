@@ -26,7 +26,7 @@ class WebhookSubscriptionService:
     async def create(
         self, data: WebhookSubscriptionCreate
     ) -> WebhookSubscriptionCreateResponse:
-        hooksub = WebhookSubscription(**data.model_dump())
+        hooksub = WebhookSubscription(**data.model_dump(mode="json"))
         hooksub = await self.repository.create(hooksub)
 
         return WebhookSubscriptionCreateResponse.model_validate(hooksub)

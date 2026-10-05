@@ -7,6 +7,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -120,6 +122,8 @@ services:
       dockerfile: Dockerfile
     container_name: production_control_worker
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -149,13 +153,15 @@ services:
       dockerfile: Dockerfile
     container_name: production_control_beat
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    environment:
+    environment: &app-env
       - APP_NAME=batches_management
       - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/project
       - DB_URL_SYNC=postgresql+psycopg2://postgres:postgres@postgres:5432/project
@@ -170,21 +176,30 @@ services:
     command: celery -A src.celery_app beat --loglevel=info
     restart: unless-stopped
 
-  flower:
+  migrate:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: production_control_migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment: *app-env
+    command: sh -c "alembic upgrade head && python -m scripts.init_minio"
+    restart: "no"
+
+
+  flower:
+    image: mher/flower:2.0
     container_name: production_control_flower
     ports:
       - "5555:5555"
     depends_on:
-      - celery_worker
-      - redis
       - rabbitmq
     environment:
-      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672//
-      - REDIS_URL=redis://redis:6379/0
-    command: celery -A src.celery_app flower --port=5555
+      - CELERY_BROKER_URL=amqp://admin:admin@rabbitmq:5672//
     restart: unless-stopped
 
   minio:

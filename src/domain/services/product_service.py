@@ -5,6 +5,7 @@ from ..exceptions.product_exception import (
     ProductNotFoundException,
     ProductAlreadyExistsException,
 )
+from asyncpg.exceptions import UniqueViolationError, ForeignKeyViolationError
 from ...tasks.aggregation import aggregate_products_task
 from ...tasks.webhooks import create_webhook_delivery_task
 from ...core.cache import invalidate_batch
@@ -20,8 +21,12 @@ class ProductService:
         product = Product(**data.model_dump())
         try:
             product = await self.repository.create(product)
-        except IntegrityError:
-            raise ProductAlreadyExistsException()
+        except IntegrityError as e:
+            if isinstance(e.orig.__cause__, UniqueViolationError):
+                raise ProductAlreadyExistsException()
+            elif isinstance(e.orig.__cause__, ForeignKeyViolationError):
+                raise ProductNotFoundException(product.batch_id)
+            raise
 
         await invalidate_batch(product.batch_id)
 
