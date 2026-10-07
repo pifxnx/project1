@@ -47,11 +47,6 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.cleanup_old_files",
         "schedule": crontab(hour=2, minute=0),
     },
-    # Повторная отправка webhooks - каждые 15 минут
-    "retry-failed-webhooks": {
-        "task": "tasks.retry_failed_webhooks",
-        "schedule": crontab(minute="*/15"),
-    },
     # Обновление статистики - каждые 5 минут
     "update-statistics": {
         "task": "tasks.update_cached_statistics",

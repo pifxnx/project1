@@ -24,29 +24,6 @@ def auto_close_expired_batches():
         return
 
 
-@celery_app.task(name="tasks.retry_failed_webhooks")
-def retry_failed_webhook_task():
-    with get_session() as session:
-        stmt = (
-            select(WebhookDelivery)
-            .join(WebhookSubscription)
-            .where(
-                WebhookDelivery.status == Status.failed,
-                WebhookDelivery.attempts < WebhookSubscription.retry_count,
-                WebhookSubscription.is_active.is_(True),
-                or_(
-                    WebhookDelivery.response_status.is_(None),
-                    WebhookDelivery.response_status >= 500,
-                ),
-            )
-        )
-        hookdels = session.execute(stmt).scalars().all()
-
-        for hookdel in hookdels:
-            sub = hookdel.subscription
-            send_webhook_delivery(hookdel, sub, session)
-
-
 @celery_app.task(name="tasks.cleanup_old_files")
 def cleanup_old_files_task():
     t = datetime.now(timezone.utc) - timedelta(days=30)
