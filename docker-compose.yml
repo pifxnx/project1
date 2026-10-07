@@ -27,6 +27,11 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
     volumes:
       - ./src:/app/src
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
@@ -142,6 +147,11 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
     volumes:
       - ./src:/app/src
     command: celery -A src.celery_app worker --loglevel=info --concurrency=4
@@ -171,6 +181,11 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
     volumes:
       - ./src:/app/src
     command: celery -A src.celery_app beat --loglevel=info

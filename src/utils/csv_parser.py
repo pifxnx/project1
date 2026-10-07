@@ -1,9 +1,39 @@
 import csv
-from .excel_parser import header_lang_map
+from .excel_generator import EXPORT_HEADERS
+
+
+headers = [
+    "batch_number",
+    "batch_date",
+    "is_closed",
+    "task_description",
+    "work_center_identifier",
+    "shift",
+    "team",
+    "nomenclature",
+    "ekn_code",
+    "total_products",
+    "aggregated_products",
+    "shift_start",
+    "shift_end",
+]
+header_lang_map = dict(zip(EXPORT_HEADERS, headers))
 
 
 class CSVParserException(Exception):
     pass
+
+
+def replace_values(row):
+    new_row = []
+    for v in row:
+        if v == "Открыта":
+            new_row.append(False)
+        elif v == "Закрыта":
+            new_row.append(True)
+        else:
+            new_row.append(v)
+    return new_row
 
 
 def parse_batches_csv(filename):
@@ -26,4 +56,4 @@ def parse_batches_csv(filename):
         headers = [header_lang_map[h] for h in reader.fieldnames]
 
         for row in reader:
-            yield dict(zip(headers, row.values()))
+            yield dict(zip(headers, replace_values(row.values())))

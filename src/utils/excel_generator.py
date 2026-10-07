@@ -1,8 +1,9 @@
 from openpyxl import Workbook
 
 
-def generate_batch_report_excel(batch: dict, products: list[dict],
-                                stats: dict, file_path: str):
+def generate_batch_report_excel(
+    batch: dict, products: list[dict], stats: dict, file_path: str
+):
     wb = Workbook()
 
     ws1 = wb.active
@@ -18,7 +19,7 @@ def generate_batch_report_excel(batch: dict, products: list[dict],
                 p["id"],
                 p["unique_code"],
                 "да" if p["is_aggregated"] else "нет",
-                p["aggregated_at"]
+                p["aggregated_at"],
             ]
         )
 
@@ -30,19 +31,37 @@ def generate_batch_report_excel(batch: dict, products: list[dict],
 
 
 EXPORT_HEADERS = [
-    "Номер партии", "Дата партии", "Статус", "Рабочий центр",
-    "Смена", "Бригада", "Номенклатура", "Код ЕКН",
-    "Всего продукции", "Аггрегировано"
+    "Номер партии",
+    "Дата партии",
+    "Статус",
+    "Описание задания",
+    "Рабочий центр",
+    "Смена",
+    "Бригада",
+    "Номенклатура",
+    "Код ЕКН",
+    "Всего продукции",
+    "Аггрегировано",
+    "Начало смены",
+    "Конец смены",
 ]
 
 
 def export_row(b: dict) -> list:
     return [
-        b["batch_number"], b["batch_date"],
+        b["batch_number"],
+        b["batch_date"],
         "Закрыта" if b["is_closed"] else "Открыта",
-        b["work_center_id"], b["shift"], b["team"],
-        b["nomenclature"], b["ekn_code"],
-        b["total_products"], b["aggregated_products"],
+        b["task_description"],
+        b["work_center_identifier"],
+        b["shift"],
+        b["team"],
+        b["nomenclature"],
+        b["ekn_code"],
+        b["total_products"],
+        b["aggregated_products"],
+        b["shift_start"],
+        b["shift_end"],
     ]
 
 

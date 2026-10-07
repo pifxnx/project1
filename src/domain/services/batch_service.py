@@ -161,7 +161,7 @@ class ImportExportService:
 
         result = import_batches_task.delay(object_name, path)
 
-        return {"id": result.id, "status": result.status}
+        return {"id": result.id, "status": result.status, "message": "Import started"}
 
     async def export_batches(self, data: dict):
         result = export_batches_task.delay(data["filters"], data["format"])

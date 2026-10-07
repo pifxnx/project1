@@ -51,13 +51,16 @@ def export_batches_task(filters: dict, format: str = "excel"):
                 "batch_number": b.batch_number,
                 "batch_date": b.batch_date,
                 "is_closed": b.is_closed,
-                "work_center_id": b.work_center_id,
+                "task_description": b.task_description,
+                "work_center_identifier": b.work_center.identifier,
                 "shift": b.shift,
                 "team": b.team,
                 "nomenclature": b.nomenclature,
                 "ekn_code": b.ekn_code,
                 "total_products": len(b.products),
                 "aggregated_products": sum(1 for p in b.products if p.is_aggregated),
+                "shift_start": b.shift_start,
+                "shift_end": b.shift_end,
             }
             for b in batches
         ]
@@ -81,4 +84,3 @@ def export_batches_task(filters: dict, format: str = "excel"):
         )
 
         return {"file_url": file_url, "total": len(rows)}
-
