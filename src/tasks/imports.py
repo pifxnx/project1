@@ -1,7 +1,8 @@
 import os
+
 from ..celery_app import celery_app, get_session
 from ..utils.excel_parser import parse_batches_excel
-from ..utils.csv_parser import parse_batches_csv
+from ..utils.csv_parser import parse_batches_csv, CSVParserException
 from ..core.storage import minio
 from ..data.models.batch import Batch
 from .webhooks import create_webhook_delivery_task
@@ -11,8 +12,7 @@ from ..data.models.work_center import WorkCenter
 from ..core.cache import invalidate_batch_sync
 from pydantic import ValidationError
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from psycopg2.errors import UniqueViolation, NotNullViolation
+from sqlalchemy.exc import DBAPIError
 
 
 @celery_app.task
@@ -34,7 +34,10 @@ def import_batches_task(object_name: str, path: str):
                 for i, row in enumerate(rows, 1):
                     stats["total_rows"] += 1
                     try:
+                        row = {k: (None if v == "" else v) for k, v in row.items()}
                         work_center_identifier = row.pop("work_center_identifier", None)
+                        if work_center_identifier is not None:
+                            work_center_identifier = str(work_center_identifier).strip()
                         work_center_name = row.pop("work_center_name", None)
                         if not work_center_identifier:
                             raise ValueError("work center identifier is empty")
@@ -59,17 +62,20 @@ def import_batches_task(object_name: str, path: str):
                             session.add(Batch(**data.model_dump()))
                             session.flush()
                     except ValidationError as e:
-                        stats["errors"].append({"row": i, "error": "validation error"})
+                        stats["errors"].append(
+                            {
+                                "row": i,
+                                "error": "; ".join(
+                                    f"{err['loc'][0] if err['loc'] else ''}: {err['msg']}"
+                                    for err in e.errors()
+                                ),
+                            }
+                        )
                         stats["skipped"] += 1
-                    except IntegrityError as e:
-                        error = e.orig
-                        if isinstance(error, UniqueViolation):
-                            reason = "duplicate batch number and date"
-                        elif isinstance(error, NotNullViolation):
-                            reason = "not null violation"
-                        else:
-                            reason = str(error)
-                        stats["errors"].append({"row": i, "error": reason})
+                    except DBAPIError as e:
+                        stats["errors"].append(
+                            {"row": i, "error": type(e.orig).__name__}
+                        )
                         stats["skipped"] += 1
                     except ValueError as e:
                         stats["errors"].append({"row": i, "error": str(e)})
@@ -80,7 +86,7 @@ def import_batches_task(object_name: str, path: str):
                 session.commit()
 
                 invalidate_batch_sync(0)
-            except ExcelParserException as e:
+            except (ExcelParserException, CSVParserException) as e:
                 stats["error"] = str(e)
 
     finally:

@@ -1,7 +1,10 @@
 from .product import ProductResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from typing import List, Literal
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from typing import Annotated, List, Literal
 from datetime import datetime, date
+
+
+PositiveInt32 = Annotated[int, Field(gt=0, le=2**31 - 1)]
 
 
 class BatchModel(BaseModel):
@@ -26,7 +29,7 @@ class BatchCreateRu(BatchModel):
     shift: str = Field(alias="Смена")
     team: str = Field(alias="Бригада")
     ekn_code: str = Field(alias="КодЕКН")
-    batch_number: int = Field(alias="НомерПартии")
+    batch_number: PositiveInt32 = Field(alias="НомерПартии")
     batch_date: date = Field(alias="ДатаПартии")
     nomenclature: str = Field(alias="Номенклатура")
     shift_start: datetime = Field(alias="ДатаВремяНачалаСмены")
@@ -87,3 +90,12 @@ class BatchExportRequest(BaseModel):
     filters: BatchExportFilters
 
     model_config = ConfigDict(extra="forbid")
+
+
+class AggregateRequest(BaseModel):
+    unique_codes: List[str] = Field(min_length=1)
+
+
+class BatchReportRequest(BaseModel):
+    format: Literal["excel", "pdf"]
+    email: EmailStr | None = None

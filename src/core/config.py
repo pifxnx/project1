@@ -1,3 +1,4 @@
+from pydantic import EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,9 +14,16 @@ class Settings(BaseSettings):
     minio_secret_key: str
     minio_secure: bool
 
+    smtp_from: EmailStr
+    smtp_port: int
+    smtp_host: str
+    smtp_user: str
+    smtp_password: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
     )
+
 
 settings = Settings()

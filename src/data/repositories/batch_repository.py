@@ -4,18 +4,18 @@ from sqlalchemy.orm import selectinload
 from datetime import date
 from typing import List
 from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
 from ..models.batch import Batch
 from ..models.work_center import WorkCenter
 from ...api.v1.schemas.batch import BatchAlter
+from ...domain.exceptions.batch_exception import BatchInvalidShiftPeriodException
 
 
 class BatchRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_or_create_work_center(
-        self, identifier: str, name: str
-    ) -> WorkCenter:
+    async def get_or_create_work_center(self, identifier: str, name: str) -> WorkCenter:
         stmt = select(WorkCenter).where(WorkCenter.identifier == identifier)
         result = await self.session.execute(stmt)
         work_center = result.scalar_one_or_none()
@@ -23,8 +23,7 @@ class BatchRepository:
         if not work_center:
             work_center = WorkCenter(identifier=identifier, name=name)
             self.session.add(work_center)
-            await self.session.commit()
-            await self.session.refresh(work_center)
+            await self.session.flush()
 
         return work_center
 
@@ -33,6 +32,27 @@ class BatchRepository:
         await self.session.commit()
         await self.session.refresh(batch)
         return batch
+
+    async def create_many_batches(self, batches: list[dict]) -> List[Batch]:
+        created = []
+        for batch in batches:
+            try:
+                async with self.session.begin_nested():
+                    work_center_identifier = batch.pop("work_center_identifier", None)
+                    work_center_name = batch.pop("work_center_name", None)
+                    work_center = await self.get_or_create_work_center(
+                        work_center_identifier, work_center_name
+                    )
+                    batch["work_center_id"] = work_center.id
+                    obj = Batch(**batch)
+                    self.session.add(obj)
+                    await self.session.flush()
+            except IntegrityError:
+                continue
+            created.append(obj)
+
+        await self.session.commit()
+        return created
 
     async def get_by_id(self, batch_id: int) -> Batch | None:
         stmt = (
@@ -94,6 +114,10 @@ class BatchRepository:
         if batch:
             before = batch.is_closed
             changes = data.model_dump(exclude_unset=True)
+            start = changes.get("shift_start", batch.shift_start)
+            end = changes.get("shift_end", batch.shift_end)
+            if end is not None and end <= start:
+                raise BatchInvalidShiftPeriodException(batch.id)
             if changes.get("is_closed", True) is None:
                 changes.pop("is_closed")
             if "is_closed" in changes and changes["is_closed"] != batch.is_closed:

@@ -62,20 +62,22 @@ class BatchService:
         )
 
     async def create_many(self, batches: List[BatchCreateRu]) -> List[BatchResponse]:
-        results = []
-        for batch in batches:
-            work_center = await self.repository.get_or_create_work_center(
-                batch.work_center_identifier, batch.work_center_name
+        result = await self.repository.create_many_batches(
+            [batch.model_dump() for batch in batches]
+        )
+        for batch in result:
+            create_webhook_delivery_task.delay(
+                "batch_created",
+                {
+                    "id": batch.id,
+                    "batch_number": batch.batch_number,
+                    "batch_date": batch.batch_date.isoformat(),
+                    "nomenclature": batch.nomenclature,
+                    "work_center": batch.work_center_id,
+                },
             )
-            data = BatchCreate(
-                **batch.model_dump(
-                    exclude={"work_center_identifier", "work_center_name"}
-                ),
-                work_center_id=work_center.id,
-            )
-            results.append(await self.create(data))
-
-        return results
+        await invalidate_batch(0)
+        return [BatchResponse.model_validate(batch) for batch in result]
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
         batch = await self.repository.get_by_id(batch_id)
@@ -128,13 +130,16 @@ class BatchService:
         return BatchResponse.model_validate(batch)
 
     async def create_batch_report(
-        self, batch_id: int, format: Literal["excel", "pdf"] = "excel"
+        self,
+        batch_id: int,
+        format: Literal["excel", "pdf"] = "excel",
+        email: str | None = None,
     ):
         batch = await self.repository.get_by_id(batch_id)
         if not batch:
             raise BatchNotFoundException(batch_id)
 
-        result = generate_batch_report.delay(batch_id, format)
+        result = generate_batch_report.delay(batch_id, format, email)
         create_webhook_delivery_task.delay("report_generated", {"id": batch_id})
 
         return {"task_id": result.id, "status": result.status}

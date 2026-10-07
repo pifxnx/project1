@@ -17,6 +17,10 @@ redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
 redis_client_sync = redis.Redis.from_url(settings.redis_url, decode_responses=True)
 
 
+def get_redis_sync() -> redis.Redis:
+    return redis_client_sync
+
+
 async def get_redis() -> Redis:
     return redis_client
 

@@ -5,6 +5,7 @@ from ..exceptions.product_exception import (
     ProductNotFoundException,
     ProductAlreadyExistsException,
 )
+from ..exceptions.batch_exception import BatchNotFoundException
 from asyncpg.exceptions import UniqueViolationError, ForeignKeyViolationError
 from ...tasks.aggregation import aggregate_products_task
 from ...tasks.webhooks import create_webhook_delivery_task
@@ -25,7 +26,7 @@ class ProductService:
             if isinstance(e.orig.__cause__, UniqueViolationError):
                 raise ProductAlreadyExistsException()
             elif isinstance(e.orig.__cause__, ForeignKeyViolationError):
-                raise ProductNotFoundException(product.batch_id)
+                raise BatchNotFoundException(product.batch_id)
             raise
 
         await invalidate_batch(product.batch_id)

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from uuid import uuid4
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
@@ -7,6 +8,7 @@ from ..celery_app import celery_app, get_session
 from ..core.storage import minio
 from ..utils.excel_generator import generate_batch_report_excel
 from ..utils.pdf_generator import generate_batch_report_pdf
+from ..utils.email_sender import send_email
 
 
 def get_batch_report_data(batch_id: int, session: Session):
@@ -55,7 +57,9 @@ def get_batch_report_data(batch_id: int, session: Session):
 
 
 @celery_app.task(bind=True, max_retries=3)
-def generate_batch_report(self, batch_id: int, format: str = "excel"):
+def generate_batch_report(
+    self, batch_id: int, format: str = "excel", email: str | None = None
+):
     generators = {
         "excel": (generate_batch_report_excel, "xlsx"),
         "pdf": (generate_batch_report_pdf, "pdf"),
@@ -74,6 +78,13 @@ def generate_batch_report(self, batch_id: int, format: str = "excel"):
 
         file_url = minio.upload_file("reports", file_path, file_name)
         file_size = os.path.getsize(file_path)
+        if email is not None:
+            send_email(
+                to=email,
+                subject=f"Отчет по партии {batch_info['Номер партии']}",
+                body=f"Отчет по партии {batch_info['Номер партии']} в формате {format}",
+                file_path=Path(file_path),
+            )
     finally:
         os.remove(file_path)
 

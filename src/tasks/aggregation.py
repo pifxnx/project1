@@ -13,7 +13,12 @@ def publish_progress(task, current: int, total: int, aggregated: int) -> None:
     if task.request.id:
         task.update_state(
             state="PROGRESS",
-            meta={"current": current, "total": total, "aggregated": aggregated},
+            meta={
+                "current": current,
+                "total": total,
+                "aggregated": aggregated,
+                "progress": current * 100 / total if total > 0 else 0,
+            },
         )
 
 

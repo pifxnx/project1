@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, status, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+    UploadFile,
+    status,
+    HTTPException,
+    Body,
+    Path,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Annotated, Literal
 from datetime import date
@@ -10,6 +19,8 @@ from ..schemas.batch import (
     BatchWithProductsResponse,
     BatchExportFilters,
     BatchExportRequest,
+    AggregateRequest,
+    BatchReportRequest,
 )
 from ....domain.services.batch_service import BatchService, ImportExportService
 from ....data.repositories.batch_repository import BatchRepository
@@ -25,7 +36,7 @@ router = APIRouter(prefix="/batches", tags=["batches"])
 
 
 @router.get("/{batch_id}", response_model=BatchWithProductsResponse)
-async def get_batch(batch_id: int):
+async def get_batch(batch_id: Annotated[int, Path(gt=0, le=2**31 - 1)]):
     batch = await get_batch_with_products(batch_id)
     if batch is None:
         raise BatchNotFoundException(batch_id)
@@ -91,11 +102,11 @@ async def update_batch(
 async def aggregate(
     session: Annotated[AsyncSession, Depends(get_db)],
     batch_id: int,
-    unique_codes: list[str],
+    unique_codes: AggregateRequest,
 ) -> dict:
     service = AggregationService(ProductRepository(session))
 
-    return await service.aggregate_products_batch(batch_id, unique_codes)
+    return await service.aggregate_products_batch(batch_id, unique_codes.unique_codes)
 
 
 @router.post("/{batch_id}/aggregate-async", status_code=status.HTTP_202_ACCEPTED)
@@ -119,12 +130,14 @@ async def get_batch_statistics(
 async def create_report(
     session: Annotated[AsyncSession, Depends(get_db)],
     batch_id: int,
-    format: Literal["excel", "pdf"] = "excel",
+    request: BatchReportRequest,
 ) -> dict:
     repository = BatchRepository(session)
     service = BatchService(repository)
 
-    return await service.create_batch_report(batch_id, format)
+    return await service.create_batch_report(
+        batch_id=batch_id, **request.model_dump(mode="json", exclude_none=True)
+    )
 
 
 @router.post("/import", status_code=status.HTTP_202_ACCEPTED)
