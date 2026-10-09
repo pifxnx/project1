@@ -9,6 +9,7 @@ from .work_center import WorkCenter
 if TYPE_CHECKING:
     from .product import Product
 
+
 class Batch(Base):
     __tablename__ = "batches"
 
@@ -23,28 +24,25 @@ class Batch(Base):
 
     batch_number: Mapped[int] = mapped_column(nullable=False)
     batch_date: Mapped[date] = mapped_column(Date, default=lambda: date.today())
-        
 
     nomenclature: Mapped[str]
     ekn_code: Mapped[str]
 
     shift_start: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-        )
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     shift_end: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc)
-        )
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
-        )
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     products: Mapped[List["Product"]] = relationship("Product", back_populates="batch")
     work_center: Mapped["WorkCenter"] = relationship("WorkCenter")
@@ -54,3 +52,4 @@ class Batch(Base):
         Index("idx_batch_closed", "is_closed"),
         Index("idx_batch_shift_times", "shift_start", "shift_end"),
     )
+

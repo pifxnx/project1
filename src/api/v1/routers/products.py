@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, List
 from ....core.database import get_db
-from ..schemas.product import ProductCreate, ProductResponse
+from ..schemas.product import PositiveInt32, ProductCreate, ProductResponse
 from ....data.repositories.product_repository import ProductRepository
 from ....domain.services.product_service import ProductService
 
@@ -19,7 +19,7 @@ async def get_product_by_id(id: int, session: Annotated[AsyncSession, Depends(ge
 
 @router.get("/batch/{batch_id}", response_model=List[ProductResponse])
 async def get_product_by_batch_id(
-    batch_id: int, session: Annotated[AsyncSession, Depends(get_db)]
+    batch_id: PositiveInt32, session: Annotated[AsyncSession, Depends(get_db)]
 ):
     repository = ProductRepository(session)
     service = ProductService(repository)

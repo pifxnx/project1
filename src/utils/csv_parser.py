@@ -1,5 +1,5 @@
 import csv
-from .excel_generator import EXPORT_HEADERS
+from .excel_parser import header_lang_map
 
 
 headers = [
@@ -17,7 +17,6 @@ headers = [
     "shift_start",
     "shift_end",
 ]
-header_lang_map = dict(zip(EXPORT_HEADERS, headers))
 
 
 class CSVParserException(Exception):

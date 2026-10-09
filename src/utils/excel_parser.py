@@ -21,6 +21,18 @@ header_lang_map = {
 }
 
 
+def replace_values(row):
+    new_row = []
+    for v in row:
+        if v == "Открыта":
+            new_row.append(False)
+        elif v == "Закрыта":
+            new_row.append(True)
+        else:
+            new_row.append(v)
+    return new_row
+
+
 def parse_batches_excel(filename):
     wb = load_workbook(filename=filename, read_only=True)
     try:
@@ -37,7 +49,7 @@ def parse_batches_excel(filename):
         headers = [header_lang_map[h] for h in headers]
 
         for row in rows:
-            yield dict(zip(headers, row))
+            yield dict(zip(headers, replace_values(row)))
 
     finally:
         wb.close()

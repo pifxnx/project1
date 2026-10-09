@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     smtp_from: EmailStr
     smtp_port: int
     smtp_host: str
-    smtp_user: str
-    smtp_password: str
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
+    smtp_login: bool = True
+
+    production_timezone: str = "Europe/Moscow"
 
     model_config = SettingsConfigDict(
         env_file=".env",

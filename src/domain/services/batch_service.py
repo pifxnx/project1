@@ -61,11 +61,11 @@ class BatchService:
             batch_date=batch.batch_date,
         )
 
-    async def create_many(self, batches: List[BatchCreateRu]) -> List[BatchResponse]:
-        result = await self.repository.create_many_batches(
+    async def create_many(self, batches: List[BatchCreateRu]) -> dict:
+        created, errors = await self.repository.create_many_batches(
             [batch.model_dump() for batch in batches]
         )
-        for batch in result:
+        for batch in created:
             create_webhook_delivery_task.delay(
                 "batch_created",
                 {
@@ -77,7 +77,10 @@ class BatchService:
                 },
             )
         await invalidate_batch(0)
-        return [BatchResponse.model_validate(batch) for batch in result]
+        return {
+            "created": [BatchResponse.model_validate(batch) for batch in created],
+            "errors": errors,
+        }
 
     async def get_by_id(self, batch_id: int) -> BatchResponse:
         batch = await self.repository.get_by_id(batch_id)

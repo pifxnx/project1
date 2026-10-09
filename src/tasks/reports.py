@@ -1,14 +1,19 @@
 import os
+import smtplib
 from pathlib import Path
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select
 from ..data.models.batch import Batch
 from ..celery_app import celery_app, get_session
 from ..core.storage import minio
+from ..core.config import settings
 from ..utils.excel_generator import generate_batch_report_excel
 from ..utils.pdf_generator import generate_batch_report_pdf
 from ..utils.email_sender import send_email
+from ..utils.csv_parser import CSVParserException
+from ..utils.excel_parser import ExcelParserException
 
 
 def get_batch_report_data(batch_id: int, session: Session):
@@ -18,13 +23,17 @@ def get_batch_report_data(batch_id: int, session: Session):
     if batch is None:
         raise ValueError(f"Batch {batch_id} not found")
 
+    local = ZoneInfo(settings.production_timezone)
+
     products = [
         {
             "id": p.id,
             "unique_code": p.unique_code,
             "is_aggregated": p.is_aggregated,
             "aggregated_at": (
-                p.aggregated_at.replace(tzinfo=None) if p.aggregated_at else None
+                p.aggregated_at.astimezone(local).replace(tzinfo=None)
+                if p.aggregated_at
+                else None
             ),
         }
         for p in batch.products
@@ -40,9 +49,11 @@ def get_batch_report_data(batch_id: int, session: Session):
         "Смена": batch.shift,
         "Бригада": batch.team,
         "Номенклатура": batch.nomenclature,
-        "Начало смены": batch.shift_start.replace(tzinfo=None),
+        "Начало смены": batch.shift_start.astimezone(local).replace(tzinfo=None),
         "Окончание смены": (
-            batch.shift_end.replace(tzinfo=None) if batch.shift_end else None
+            batch.shift_end.astimezone(local).replace(tzinfo=None)
+            if batch.shift_end
+            else None
         ),
     }
 
@@ -74,17 +85,28 @@ def generate_batch_report(
     file_name = f"batch_{batch_info['Номер партии']}_{uuid4().hex}_report.{ext}"
     file_path = f"/tmp/{file_name}"
     try:
-        generator(batch_info, products, stats, file_path)
+        try:
+            generator(batch_info, products, stats, file_path)
+        except (CSVParserException, ExcelParserException) as error:
+            return {
+                "success": False,
+                "error": str(error),
+            }
 
         file_url = minio.upload_file("reports", file_path, file_name)
         file_size = os.path.getsize(file_path)
-        if email is not None:
-            send_email(
-                to=email,
-                subject=f"Отчет по партии {batch_info['Номер партии']}",
-                body=f"Отчет по партии {batch_info['Номер партии']} в формате {format}",
-                file_path=Path(file_path),
-            )
+        email_status = None
+        if email:
+            try:
+                send_email(
+                    to=email,
+                    subject=f"Отчет по партии {batch_info['Номер партии']}",
+                    body=f"Отчет по партии {batch_info['Номер партии']} в формате {format}",
+                    file_path=Path(file_path),
+                )
+                email_status = "sent"
+            except (smtplib.SMTPException, OSError) as error:
+                email_status = f"failed: {error}"
     finally:
         os.remove(file_path)
 
@@ -93,4 +115,5 @@ def generate_batch_report(
         "file_url": file_url,
         "file_name": file_name,
         "file_size": file_size,
+        "email_status": email_status,
     }

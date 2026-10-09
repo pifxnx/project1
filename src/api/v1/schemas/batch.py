@@ -1,7 +1,16 @@
 from .product import ProductResponse
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
 from typing import Annotated, List, Literal
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
+from ....core.config import settings
 
 
 PositiveInt32 = Annotated[int, Field(gt=0, le=2**31 - 1)]
@@ -9,6 +18,13 @@ PositiveInt32 = Annotated[int, Field(gt=0, le=2**31 - 1)]
 
 class BatchModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("shift_start", "shift_end", check_fields=False)
+    @classmethod
+    def ensure_aware(cls, value):
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=ZoneInfo(settings.production_timezone))
+        return value
 
     @model_validator(mode="after")
     def check_shift_range(self):
@@ -57,6 +73,11 @@ class BatchResponse(BatchModel):
     batch_date: date
 
 
+class BatchCreateResponse(BatchModel):
+    created: List[BatchResponse]
+    errors: List[dict]
+
+
 class BatchWithProductsResponse(BatchModel):
     id: int
     is_closed: bool
@@ -78,7 +99,7 @@ class BatchAlter(BatchModel):
 
 class BatchExportFilters(BaseModel):
     is_closed: bool | None = None
-    batch_number: int | None = None
+    batch_number: PositiveInt32 | None = None
     batch_date_from: date | None = None
     batch_date_to: date | None = None
     work_center_id: int | None = None

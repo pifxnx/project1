@@ -1,4 +1,5 @@
 from openpyxl import Workbook
+from .excel_parser import header_lang_map
 
 
 def generate_batch_report_excel(
@@ -31,19 +32,17 @@ def generate_batch_report_excel(
 
 
 EXPORT_HEADERS = [
-    "Номер партии",
-    "Дата партии",
-    "Статус",
-    "Описание задания",
-    "Рабочий центр",
+    "НомерПартии",
+    "ДатаПартии",
+    "СтатусЗакрытия",
+    "ПредставлениеЗаданияНаСмену",
+    "ИдентификаторРЦ",
     "Смена",
     "Бригада",
     "Номенклатура",
-    "Код ЕКН",
-    "Всего продукции",
-    "Аггрегировано",
-    "Начало смены",
-    "Конец смены",
+    "КодЕКН",
+    "ДатаВремяНачалаСмены",
+    "ДатаВремяОкончанияСмены",
 ]
 
 
@@ -58,8 +57,6 @@ def export_row(b: dict) -> list:
         b["team"],
         b["nomenclature"],
         b["ekn_code"],
-        b["total_products"],
-        b["aggregated_products"],
         b["shift_start"],
         b["shift_end"],
     ]

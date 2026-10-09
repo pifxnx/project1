@@ -28,14 +28,19 @@ class BatchRepository:
         return work_center
 
     async def create(self, batch: Batch) -> Batch:
+        if batch.is_closed and batch.closed_at is None:
+            batch.closed_at = datetime.now(timezone.utc)
         self.session.add(batch)
         await self.session.commit()
         await self.session.refresh(batch)
         return batch
 
-    async def create_many_batches(self, batches: list[dict]) -> List[Batch]:
-        created = []
-        for batch in batches:
+    async def create_many_batches(
+        self, batches: list[dict]
+    ) -> tuple[List[Batch], list[dict]]:
+        created: list[Batch] = []
+        errors: list[dict] = []
+        for i, batch in enumerate(batches, 1):
             try:
                 async with self.session.begin_nested():
                     work_center_identifier = batch.pop("work_center_identifier", None)
@@ -45,14 +50,17 @@ class BatchRepository:
                     )
                     batch["work_center_id"] = work_center.id
                     obj = Batch(**batch)
+                    if obj.is_closed and obj.closed_at is None:
+                        obj.closed_at = datetime.now(timezone.utc)
                     self.session.add(obj)
                     await self.session.flush()
-            except IntegrityError:
-                continue
-            created.append(obj)
+            except IntegrityError as e:
+                errors.append({"row": i, "error": type(e.orig).__name__})
+            else:
+                created.append(obj)
 
         await self.session.commit()
-        return created
+        return created, errors
 
     async def get_by_id(self, batch_id: int) -> Batch | None:
         stmt = (

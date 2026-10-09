@@ -28,6 +28,8 @@ def send_email(to: str, subject: str, body: str, file_path: Path) -> None:
         )
 
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
-        smtp.starttls()
-        smtp.login(settings.smtp_user, settings.smtp_password)
+        if settings.smtp_starttls:
+            smtp.starttls()
+        if settings.smtp_login:
+            smtp.login(settings.smtp_user, settings.smtp_password)
         smtp.send_message(message)

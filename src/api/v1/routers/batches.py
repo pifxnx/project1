@@ -14,6 +14,7 @@ from datetime import date
 from ....core.database import get_db
 from ..schemas.batch import (
     BatchCreateRu,
+    BatchCreateResponse,
     BatchResponse,
     BatchAlter,
     BatchWithProductsResponse,
@@ -21,6 +22,7 @@ from ..schemas.batch import (
     BatchExportRequest,
     AggregateRequest,
     BatchReportRequest,
+    PositiveInt32,
 )
 from ....domain.services.batch_service import BatchService, ImportExportService
 from ....data.repositories.batch_repository import BatchRepository
@@ -45,7 +47,7 @@ async def get_batch(batch_id: Annotated[int, Path(gt=0, le=2**31 - 1)]):
 
 
 @router.post(
-    "/", response_model=List[BatchResponse], status_code=status.HTTP_201_CREATED
+    "/", response_model=BatchCreateResponse, status_code=status.HTTP_201_CREATED
 )
 async def create_batches(
     data: List[BatchCreateRu], session: AsyncSession = Depends(get_db)
@@ -60,7 +62,7 @@ async def create_batches(
 async def get_batches(
     session: Annotated[AsyncSession, Depends(get_db)],
     is_closed: bool | None = None,
-    batch_number: int | None = None,
+    batch_number: PositiveInt32 | None = None,
     batch_date: date | None = None,
     work_center_id: int | None = None,
     shift: str | None = None,
@@ -90,7 +92,9 @@ async def get_batches(
 
 @router.patch("/{batch_id}", response_model=BatchResponse)
 async def update_batch(
-    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int, data: BatchAlter
+    session: Annotated[AsyncSession, Depends(get_db)],
+    batch_id: PositiveInt32,
+    data: BatchAlter,
 ):
     repository = BatchRepository(session)
     service = BatchService(repository)
@@ -101,7 +105,7 @@ async def update_batch(
 @router.post("/{batch_id}/aggregate", status_code=status.HTTP_200_OK)
 async def aggregate(
     session: Annotated[AsyncSession, Depends(get_db)],
-    batch_id: int,
+    batch_id: PositiveInt32,
     unique_codes: AggregateRequest,
 ) -> dict:
     service = AggregationService(ProductRepository(session))
@@ -110,15 +114,19 @@ async def aggregate(
 
 
 @router.post("/{batch_id}/aggregate-async", status_code=status.HTTP_202_ACCEPTED)
-async def aggregate_async(batch_id: int, unique_codes: list[str]) -> dict:
+async def aggregate_async(
+    batch_id: PositiveInt32, unique_codes: AggregateRequest
+) -> dict:
     service = AggregationService()
 
-    return await service.aggregate_products_batch_async(batch_id, unique_codes)
+    return await service.aggregate_products_batch_async(
+        batch_id, unique_codes.unique_codes
+    )
 
 
 @router.get("/{batch_id}/statistics")
 async def get_batch_statistics(
-    session: Annotated[AsyncSession, Depends(get_db)], batch_id: int
+    session: Annotated[AsyncSession, Depends(get_db)], batch_id: PositiveInt32
 ) -> dict:
     repository = BatchRepository(session)
     service = AnalyticsService(repository)
@@ -129,7 +137,7 @@ async def get_batch_statistics(
 @router.post("/{batch_id}/reports", status_code=status.HTTP_202_ACCEPTED)
 async def create_report(
     session: Annotated[AsyncSession, Depends(get_db)],
-    batch_id: int,
+    batch_id: PositiveInt32,
     request: BatchReportRequest,
 ) -> dict:
     repository = BatchRepository(session)

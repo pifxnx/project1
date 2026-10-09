@@ -95,4 +95,8 @@ class AggregationService:
     ) -> dict:
         task = aggregate_products_task.delay(batch_id, unique_codes)
 
-        return {"task_id": task.id}
+        return {
+            "task_id": task.id,
+            "status": "pending",
+            "message": "aggregation started",
+        }

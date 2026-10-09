@@ -1,4 +1,5 @@
 import json
+import time
 from sqlalchemy import select, update, func, or_
 from datetime import datetime, timedelta, timezone
 from ..data.models.batch import Batch
@@ -73,3 +74,40 @@ def update_cached_statistics():
 
     redis = get_redis_sync()
     redis.set("dashboard_stats:", json.dumps(result, default=str), ex=300)
+
+
+@celery_app.task(name="tasks.retry_failed_webhooks")
+def retry_failed_webhooks():
+    with get_session() as session:
+        stmt = (
+            select(WebhookDelivery)
+            .join(
+                WebhookSubscription,
+                WebhookDelivery.subscription_id == WebhookSubscription.id,
+            )
+            .where(
+                WebhookDelivery.status == Status.failed,
+                WebhookDelivery.attempts < WebhookSubscription.retry_count,
+                WebhookSubscription.is_active.is_(True),
+                or_(
+                    WebhookDelivery.response_status.is_(None),
+                    WebhookDelivery.response_status >= 500,
+                    WebhookDelivery.response_status.in_((408, 429)),
+                ),
+            )
+            .with_for_update(skip_locked=True, of=WebhookDelivery)
+        )
+        hookdels = session.execute(stmt).scalars().all()
+
+        for hookdel in hookdels:
+            sub = session.get(WebhookSubscription, hookdel.subscription_id)
+            while (
+                hookdel.attempts < sub.retry_count and hookdel.status == Status.failed
+            ):
+                send_webhook_delivery(hookdel, sub, session)
+                if hookdel.status == Status.success:
+                    break
+                status = hookdel.response_status
+                if status is not None and status < 500 and status not in (408, 429):
+                    break
+                time.sleep(2**hookdel.attempts)

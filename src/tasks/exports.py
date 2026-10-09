@@ -3,6 +3,8 @@ from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 from datetime import date
+from zoneinfo import ZoneInfo
+from ..core.config import settings
 from ..data.models.batch import Batch
 from ..celery_app import celery_app, get_session
 from ..utils.excel_generator import generate_export_batches_excel
@@ -45,6 +47,7 @@ def export_batches_task(filters: dict, format: str = "excel"):
     parsed = BatchExportFilters(**filters)
     with get_session() as session:
         batches = get_batches_filters(session, **parsed.model_dump())
+        local = ZoneInfo(settings.production_timezone)
 
         rows = [
             {
@@ -59,8 +62,10 @@ def export_batches_task(filters: dict, format: str = "excel"):
                 "ekn_code": b.ekn_code,
                 "total_products": len(b.products),
                 "aggregated_products": sum(1 for p in b.products if p.is_aggregated),
-                "shift_start": b.shift_start,
-                "shift_end": b.shift_end,
+                "shift_start": b.shift_start.astimezone(local).replace(tzinfo=None),
+                "shift_end": b.shift_end.astimezone(local).replace(tzinfo=None)
+                if b.shift_end
+                else None,
             }
             for b in batches
         ]
