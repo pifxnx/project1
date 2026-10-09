@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, Body
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.v1.schemas.batch import PositiveInt32
 from ....core.cache import get_dashboard_statistics
 from ....domain.services.analytics_service import AnalyticsService
 from ....data.repositories.batch_repository import BatchRepository
 from ....core.database import get_db
+from ..schemas.product import PositiveInt32
 
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
