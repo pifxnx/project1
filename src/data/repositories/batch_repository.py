@@ -5,6 +5,7 @@ from datetime import date
 from typing import List
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
+from asyncpg.exceptions import UniqueViolationError
 from ..models.batch import Batch
 from ..models.work_center import WorkCenter
 from ...api.v1.schemas.batch import BatchAlter
@@ -55,7 +56,10 @@ class BatchRepository:
                     self.session.add(obj)
                     await self.session.flush()
             except IntegrityError as e:
-                errors.append({"row": i, "error": type(e.orig).__name__})
+                if isinstance(e.orig.__cause__, UniqueViolationError):
+                    errors.append({"row": i, "error": "UniqueViolationError"})
+                else:
+                    errors.append({"row": i, "error": type(e.orig).__name__})
             else:
                 created.append(obj)
 

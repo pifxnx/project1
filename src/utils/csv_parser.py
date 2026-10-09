@@ -37,15 +37,12 @@ def replace_values(row):
 
 def parse_batches_csv(filename):
     with open(filename, encoding="utf-8-sig", newline="") as f:
-        sample = f.read(1024)
-        if not sample.strip():
+        header = f.readline()
+        if not header.strip():
             raise CSVParserException("файл пустой")
-        try:
-            dialect = csv.Sniffer().sniff(sample, delimiters=";,")
-        except csv.Error:
-            raise CSVParserException("не удалось определить разделитель")
+        delimiter = ";" if header.count(";") > header.count(",") else ","
         f.seek(0)
-        reader = csv.DictReader(f, dialect=dialect)
+        reader = csv.DictReader(f, delimiter=delimiter)
 
         if not reader.fieldnames:
             raise CSVParserException("файл пустой")
