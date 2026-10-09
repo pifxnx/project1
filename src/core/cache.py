@@ -1,0 +1,151 @@
+import json
+import redis
+from datetime import datetime, timezone
+from redis.asyncio import Redis
+from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
+from typing import List
+from ..api.v1.schemas.batch import BatchResponse, BatchWithProductsResponse
+from ..data.models.batch import Batch
+from ..data.models.product import Product
+from ..core.database import sessionmaker
+from ..core.config import settings
+
+
+redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
+
+redis_client_sync = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+
+
+def get_redis_sync() -> redis.Redis:
+    return redis_client_sync
+
+
+async def get_redis() -> Redis:
+    return redis_client
+
+
+def make_key(*args, **kwargs):
+    key = ""
+    if args:
+        key += ":".join(str(a) for a in args)
+    if kwargs:
+        key += ":" + ":".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
+
+    return key
+
+
+def build_key(prefix: str, *args, **kwargs) -> str:
+    key = prefix + ":" + make_key(*args, **kwargs)
+    return key
+
+
+async def invalidate_batch(batch_id: int):
+    await redis_client.delete(
+        build_key("batch_detail", batch_id), build_key("dashboard_stats")
+    )
+    async for k in redis_client.scan_iter("batches_list:*"):
+        await redis_client.delete(k)
+
+
+def invalidate_batch_sync(batch_id: int):
+    redis_client_sync.delete(
+        build_key("batch_detail", batch_id), build_key("dashboard_stats")
+    )
+    for k in redis_client_sync.scan_iter("batches_list:*"):
+        redis_client_sync.delete(k)
+
+
+def cache(ttl: int, key_prefix: str):
+    def deco(func):
+        async def wrapper(*args, **kwargs):
+            key = build_key(key_prefix, *args, **kwargs)
+
+            r = await get_redis()
+
+            cached = await r.get(key)
+            if cached is not None:
+                return json.loads(cached)
+
+            result = await func(*args, **kwargs)
+            if result is not None:
+                await r.set(key, json.dumps(result, default=str), ex=ttl)
+
+            return result
+
+        return wrapper
+
+    return deco
+
+
+@cache(ttl=300, key_prefix="dashboard_stats")
+async def get_dashboard_statistics():
+    async with sessionmaker() as session:
+        stmt = (
+            select(
+                func.count(Batch.id.distinct()).label("total_batches"),
+                func.count(Batch.id.distinct())
+                .filter(Batch.is_closed.is_(False))
+                .label("active_batches"),
+                func.count(Product.id).label("total_products"),
+                func.count(Product.id)
+                .filter(Product.is_aggregated.is_(True))
+                .label("aggregated_products"),
+            )
+            .select_from(Batch)
+            .outerjoin(Product, Batch.id == Product.batch_id)
+        )
+
+        result = await session.execute(stmt)
+        stats = result.one()
+
+        aggr_rate = (
+            stats.aggregated_products / stats.total_products * 100
+            if stats.total_products > 0
+            else 0
+        )
+
+        return {
+            "total_batches": stats.total_batches,
+            "active_batches": stats.active_batches,
+            "total_products": stats.total_products,
+            "aggregated_products": stats.aggregated_products,
+            "aggregation_rate": aggr_rate,
+            "cached_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+
+@cache(ttl=60, key_prefix="batches_list")
+async def get_batches_list(
+    is_closed: bool | None = None, offset: int = 0, limit: int = 20
+) -> List[dict]:
+    async with sessionmaker() as session:
+        stmt = select(Batch).limit(limit).offset(offset)
+
+        if is_closed is not None:
+            stmt = stmt.where(Batch.is_closed == is_closed)
+
+        result = await session.execute(stmt)
+        batches = result.scalars().all()
+
+        batches = [BatchResponse.model_validate(batch) for batch in batches]
+
+        return [batch.model_dump(mode="json") for batch in batches]
+
+
+@cache(ttl=600, key_prefix="batch_detail")
+async def get_batch_with_products(batch_id: int):
+    async with sessionmaker() as session:
+        stmt = (
+            select(Batch)
+            .where(Batch.id == batch_id)
+            .options(joinedload(Batch.products))
+        )
+
+        result = await session.execute(stmt)
+        batch = result.unique().scalar_one_or_none()
+        if batch is None:
+            return None
+        batch = BatchWithProductsResponse.model_validate(batch)
+
+        return batch.model_dump(mode="json")

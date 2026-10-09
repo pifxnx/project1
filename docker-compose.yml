@@ -1,0 +1,255 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_api
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      - APP_NAME=batches_management
+      - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/project
+      - DB_URL_SYNC=postgresql+psycopg2://postgres:postgres@postgres:5432/project
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
+      - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
+      - SMTP_LOGIN=${SMTP_LOGIN:-true}
+    volumes:
+      - ./src:/app/src
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  webhook_receiver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_webhook_receiver
+    ports:
+      - "5000:5000"
+    command: python webhook_receiver.py
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: production_control_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: project
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  postgres_test:
+    image: postgres:16-alpine
+    container_name: production_control_test_db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: production_control_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: production_control_rabbitmq
+    ports:
+      - "5672:5672"    
+      - "15672:15672"  
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      - APP_NAME=batches_management
+      - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/project
+      - DB_URL_SYNC=postgresql+psycopg2://postgres:postgres@postgres:5432/project
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
+      - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
+      - SMTP_LOGIN=${SMTP_LOGIN:-true}
+    volumes:
+      - ./src:/app/src
+    command: celery -A src.celery_app worker --loglevel=info --concurrency=4
+    restart: unless-stopped
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_beat
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment: &app-env
+      - APP_NAME=batches_management
+      - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/project
+      - DB_URL_SYNC=postgresql+psycopg2://postgres:postgres@postgres:5432/project
+      - RABBITMQ_URL=amqp://admin:admin@rabbitmq:5672//
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_SECURE=False
+      - SMTP_FROM=${SMTP_FROM:-example@gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_USER=${SMTP_USER:-example@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-changeme}
+      - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
+      - SMTP_LOGIN=${SMTP_LOGIN:-true}
+    volumes:
+      - ./src:/app/src
+    command: celery -A src.celery_app beat --loglevel=info
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_control_migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment: *app-env
+    command: sh -c "alembic upgrade head && python -m scripts.init_minio"
+    restart: "no"
+
+
+  flower:
+    image: mher/flower:2.0
+    container_name: production_control_flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+    environment:
+      - CELERY_BROKER_URL=amqp://admin:admin@rabbitmq:5672//
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: production_control_minio
+    ports:
+      - "9000:9000"  
+      - "9001:9001"  
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  minio_data:
+    driver: local
